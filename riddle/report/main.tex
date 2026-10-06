@@ -66,7 +66,7 @@ breakatwhitespace=true,
 \pagenumbering{arabic}
 \section*{\ul{Εμπόδιο 0}}
 \subsection*{\ul{Διάγνωση}}
-Χρησιμοποιόντας την \eng{\texttt{ltrace -Sf}} βλέπουμε την κλήση \eng{\texttt{[pid 10537] open(".hello_there", 0, 00)             = -1}}. 
+Χρησιμοποιόντας την \eng{\texttt{ltrace -Sf}} βλέπουμε την κλήση \eng{\texttt{open(".hello\_there", 0, 00)             = -1}}. 
 
 \subsection*{\ul{Επίλυση}}
 Δημιουργούμε το ζητούμενο αρχείο ώστε η κλήση να επιτυγχάνει.
@@ -75,7 +75,7 @@ breakatwhitespace=true,
 
 \section*{\ul{Εμπόδιο 1}}
 \subsection*{\ul{Διάγνωση}}
-Όμοια, γίνεται κλήση της \eng{open(..., O_WRONLY, ...)}.
+Όμοια, γίνεται κλήση της \eng{\texttt{open(..., O\_WRONLY, ...)}}, την οποία θέλουμε να αποτρέψουμε.
 
 
 \subsection*{\ul{Επίλυση}}
