@@ -1,0 +1,96 @@
+\documentclass[13pt]{article}
+
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage[utf8]{inputenc}
+\usepackage[english,greek]{babel}
+\usepackage{graphicx}
+\graphicspath{{media/}}
+\usepackage[
+  a4paper,
+  top=2.5cm,
+  bottom=2.5cm,
+  left=2.5cm,
+  right=2.5cm
+]{geometry}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage{pdfpages}
+\usepackage{soul}
+\usepackage{listings}
+\usepackage{subcaption}
+\usepackage{caption}
+
+\lstset{%
+breaklines=true,
+breakatwhitespace=true, 
+%columns=fullflexible
+}
+
+\newcommand{\eng}[1]{\foreignlanguage{english}{#1}}
+\newcommand{\langeng}{\selectlanguage{english}}
+\newcommand{\langgrc}{\selectlanguage{greek}}
+
+\title{Λειτουργικά Συστήματα Υπολογιστών\\[1.2ex]
+        \Large Γρίφος}
+\date{\today}
+\author{Ίωνας Τσακίρης 03123077\footnote{\eng{el23077@mail.ntua.gr}}}
+
+
+% Definition of \maketitle
+\makeatletter         
+\def\@maketitle{
+\raggedright
+\mbox{}\hfill
+\begin{minipage}{2cm}
+    \includegraphics[width = 20mm,valign=b]{pyrforos}
+\end{minipage}
+\hfill
+\begin{minipage}{12cm}
+    {\Large \bfseries Εθνικό Μετσόβιο Πολυτεχνείο}\\ 
+    {\Large Σχολή Ηλεκτρολόγων Μηχανικών και Μηχανικών\\Υπολογιστών}
+\end{minipage}
+
+\\[16ex]
+\begin{center}
+{\Huge \bfseries \@title }\\[4ex] 
+{\Large  \@author}\\[4ex] 
+\@date\\[8ex]
+\end{center}}
+\makeatother
+
+\begin{document}
+\pagenumbering{gobble}
+\maketitle
+\newpage
+\pagenumbering{arabic}
+\section*{\ul{Εμπόδιο 0}}
+\subsection*{\ul{Διάγνωση}}
+Χρησιμοποιόντας την \eng{\texttt{ltrace -Sf}} βλέπουμε την κλήση \eng{\texttt{[pid 10537] open(".hello_there", 0, 00)             = -1}}. 
+
+\subsection*{\ul{Επίλυση}}
+Δημιουργούμε το ζητούμενο αρχείο ώστε η κλήση να επιτυγχάνει.
+
+\vspace{5mm}
+
+\section*{\ul{Εμπόδιο 1}}
+\subsection*{\ul{Διάγνωση}}
+Όμοια, γίνεται κλήση της \eng{open(..., O_WRONLY, ...)}.
+
+
+\subsection*{\ul{Επίλυση}}
+Αλλάζουμε την επίτρεψη του αρχείου σε \texttt{0444}, δηλαδή σε \eng{read-only}.
+\vspace{5mm}
+
+\section*{\ul{Εμπόδιο 1}}
+\subsection*{\ul{Διάγνωση}}
+\subsection*{\ul{Επίλυση}}
+
+\langeng
+\begin{lstlisting}[language=c]
+\end{lstlisting}
+\langgrc
+
+
+
+\end{document}
