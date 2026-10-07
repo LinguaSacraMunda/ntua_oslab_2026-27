@@ -24,7 +24,7 @@
 \lstset{%
 breaklines=true,
 breakatwhitespace=true, 
-%columns=fullflexible
+columns=fullflexible
 }
 
 \newcommand{\eng}[1]{\foreignlanguage{english}{#1}}
@@ -66,7 +66,7 @@ breakatwhitespace=true,
 \pagenumbering{arabic}
 \section*{\ul{Εμπόδιο 0}}
 \subsection*{\ul{Διάγνωση}}
-Χρησιμοποιόντας την \eng{\texttt{ltrace -Sf}} βλέπουμε την κλήση \eng{\texttt{open(".hello\_there", 0, 00)             = -1}}. 
+Χρησιμοποιόντας την \eng{\texttt{ltrace -SCf}} βλέπουμε την κλήση \eng{\texttt{open(".hello\_there", 0, 00)             = -1}}. 
 
 \subsection*{\ul{Επίλυση}}
 Δημιουργούμε το ζητούμενο αρχείο ώστε η κλήση να επιτυγχάνει.
@@ -80,6 +80,68 @@ breakatwhitespace=true,
 
 \subsection*{\ul{Επίλυση}}
 Αλλάζουμε την επίτρεψη του αρχείου σε \texttt{0444}, δηλαδή σε \eng{read-only}.
+\vspace{5mm}
+
+\section*{\ul{Εμπόδιο 2}}
+\subsection*{\ul{Διάγνωση}}
+Από την κάτωθι έξοδο του \eng{\texttt{ltrace}}, παρατηρούμε ότι ο γρίφος θέτει ένα \eng{\texttt{alarm(10)}} και \eng{handlers} για τα \eng{\texttt{SIGCONT,\;SIGALRM}}.
+
+
+\langeng
+\begin{lstlisting}[language=bash]
+[pid 9018] signal(SIGALRM, 0x55a93d360350 <unfinished ...>
+[pid 9018] rt_sigaction@SYS(14, 0x7ffc6c8159e0, 0x7ffc6c815a80, 8)                                         = 0
+[pid 9018] <... signal resumed> )                                                                          = nil
+[pid 9018] signal(SIGCONT, 0x55a93d360350 <unfinished ...>
+[pid 9018] rt_sigaction@SYS(18, 0x7ffc6c8159e0, 0x7ffc6c815a80, 8)                                         = 0
+[pid 9018] <... signal resumed> )                                                                          = nil
+[pid 9018] alarm(10 <unfinished ...>
+[pid 9018] alarm@SYS(10, 0x7ffc6c8159e0, 0, 8)                                                             = 0
+[pid 9018] <... alarm resumed> )                                                                           = 0
+[pid 9018] pause(10, 0x7ffc6c8159e0, 0, 0x7f68488e60ab <unfinished ...>
+[pid 9018] pause@SYS()                                                                                     = -514
+[pid 9018] --- SIGALRM (Alarm clock) ---
+[pid 9018] rt_sigreturn@SYS(14, 0x7ffc6c8150b0, 0x7ffc6c814f80, 0)                                         = -4
+\end{lstlisting}
+\langgrc
+\subsection*{\ul{Επίλυση}}
+Εκτελούμε τον γρίφο ως παιδί ενός άλλου προγράμματος, το οποίο του στέλνει \eng{\texttt{SIGCONT}} πρίν τη λήξη του χρονόμετρου.
+
+\vspace{5mm}
+
+\section*{\ul{Εμπόδιο 3}}
+\subsection*{\ul{Διάγνωση}}
+Όμοια με το εμπόδιο 6 του αντίστοιχου γρίφου του εισαγωγικού μαθήματος.
+\langeng
+\begin{lstlisting}[language=bash]
+[pid 10048] getenv("ANSWER")                        = nil
+\end{lstlisting}
+\langgrc
+\subsection*{\ul{Επίλυση}}
+$42\pm\phi^4$
+
+\vspace{5mm}
+
+\section*{\ul{Εμπόδιο 4}}
+\subsection*{\ul{Διάγνωση}}
+\langeng
+\begin{lstlisting}[language=c]
+
+[pid 11536] open("magic_mirror", 0x2, 021 <unfinished ...>
+[pid 11536] openat@SYS(AT_FDCWD, "magic_mirror", 0x2, 00) = 4
+[pid 11536] <... open resumed> )                    = 4
+[pid 11536] rand()                                  = 1036441011
+[pid 11536] write(4, "V", 1 <unfinished ...>
+[pid 11536] write@SYS(4, "V", 1)                    = 1
+[pid 11536] <... write resumed> )                   = 1
+[pid 11536] read(4 <unfinished ...>
+[pid 11536] read@SYS(4, "", 1)                      = 0
+
+\end{lstlisting}
+\langgrc
+\subsection*{\ul{Επίλυση}}
+Διαβάζουμε το περιεχόμενο του αρχείου \eng{\texttt{magic\_mirror}} και το επαναγράφουμε σε αυτό.
+
 \vspace{5mm}
 
 \section*{\ul{Εμπόδιο 1}}
