@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
 
 #ifdef C4
     int fd_c4;
-    err_chk((fd_c4 = open("./magic_mirror", O_CREAT | O_RDWR, 0666)), "open C4");
+    err_chk((fd_c4 = mkfifo("./magic_mirror", 0666)), "mkfifo C4");
 #endif
 
 	pid_t p;
@@ -60,18 +60,6 @@ int main(int argc, char **argv) {
 
 
 #ifdef C4
-    // Wait till the riddle writes a random character to the opened file,
-    // after which point it should read the same character back. Need
-    // to synchronise the processes?
-    ssize_t rcnt = 0;
-    char buf;
-    while ((rcnt = read(fd_c4, &buf, (size_t) sizeof(buf))) == 0);
-    
-    kill(p, SIGSTOP);
-
-    err_chk(write(fd_c4, &buf, sizeof(buf)), "write C4");
-
-    kill(p, SIGCONT);
     err_chk(close(fd_c4), "close C4");
 #endif
 #ifdef C2

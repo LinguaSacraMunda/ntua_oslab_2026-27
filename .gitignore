@@ -1,0 +1,10 @@
+*.[osa]
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+*.pdf
+!main.pdf
+*.out
+**/pyrforos.eps
