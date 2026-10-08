@@ -60,12 +60,14 @@ int main(int argc, char **argv) {
     //setenv("USER", "PONG", 1);
     //setenv("USERNAME", "PONG", 1);
     //setenv("LOGNAME", "PONG", 1);
-    int fd_c6_33, fd_c6_34;
-    err_chk((fd_c6_33 = open("c6_33", O_CREAT | O_RDWR | O_TRUNC, 0777)), "open C6");
-    err_chk((fd_c6_34 = open("c6_34", O_CREAT | O_RDWR | O_TRUNC, 0777)), "open C6");
-    err_chk(write(fd_c6_33, "PONG", strlen("PONG")), "write C6");
-    err_chk(dup2(fd_c6_33, 33), "dup2 C6");
-    err_chk(dup2(fd_c6_34, 34), "dup2 C6");
+    const int c6_fd_cnt = 16;
+    int fd_c6[c6_fd_cnt][2];
+
+    for (int i = 0; i < c6_fd_cnt; i++) {
+        err_chk((pipe(fd_c6[i])), "pipe C6");
+        err_chk((dup2(fd_c6[i][0], 33 + 20 * i)), "dup2 C6 read end");
+        err_chk((dup2(fd_c6[i][1], 34 + 20 * i)), "dup2 C6 write end");
+    }
 #endif
 
 	pid_t p;
@@ -98,8 +100,10 @@ int main(int argc, char **argv) {
     err_chk(close(fd_c5), "close C5");
 #endif
 #ifdef C6
-    err_chk(close(fd_c6_33), "close C6");
-    err_chk(close(fd_c6_34), "close C6");
+    for (int i = 0; i < c6_fd_cnt; i++) {
+        err_chk(close(fd_c6[i][0]), "close C6 read end");
+        err_chk(close(fd_c6[i][1]), "close C6 write end");
+    }
 #endif
 
 

@@ -154,7 +154,7 @@ $42\pm\phi^4$
 
 \section*{\ul{Εμπόδιο 6}}
 \subsection*{\ul{Διάγνωση}}
-Παρατηρούμε ότι ο γρίφος γεννά δύο διεργασίες, ο πρώτη εκ των οποίων τυπώνει το \eng{\texttt{<PID> PING!}} στο \eng{\texttt{stdout}}, και η δεύτερη θέτει ένα χρονόμετρο των 2 δευτερολέπτων πριν διαβάσει από το \eng{file descriptor 33}, λαμβάνοντας τους τέσσερις πρώτους χαρακτήρες του \eng{username}.
+Παρατηρούμε ότι ο γρίφος γεννά δύο διεργασίες, ο πρώτη εκ των οποίων τυπώνει το \eng{\texttt{<PID> PING!}} στο \eng{\texttt{stdout}} και γράφει στο \eng{file descriptor 34}, ενώ η δεύτερη θέτει ένα χρονόμετρο των 2 δευτερολέπτων πριν διαβάσει από το \eng{file descriptor 33}. Η διαδικασία αυτή επαναλαμβάνετε με ολοένα αυξανόμενες τιμές \eng{file descriptors}.
 
 \langeng
 \begin{lstlisting}[language=bash]
@@ -192,7 +192,7 @@ error: maximum array length seems negative
 \end{lstlisting}
 \langgrc
 \subsection*{\ul{Επίλυση}}
-Μεταβάλουμε το \eng{username} σε \eng{PONG}.
+Δημιουργούμε μια συστοιχία \eng{pipes} με κατάλληλες τιμές \eng{file descriptor}, τα οποία κληρονομούν αφ' ενός ο γρίφος, αφ' ετέρου τα παιδιά του.
 
 
 \vspace{5mm}
