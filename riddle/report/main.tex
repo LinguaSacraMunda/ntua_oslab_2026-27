@@ -125,7 +125,7 @@ $42\pm\phi^4$
 \section*{\ul{Εμπόδιο 4}}
 \subsection*{\ul{Διάγνωση}}
 \langeng
-\begin{lstlisting}[language=c]
+\begin{lstlisting}[language=bash]
 
 [pid 11536] open("magic_mirror", 0x2, 021 <unfinished ...>
 [pid 11536] openat@SYS(AT_FDCWD, "magic_mirror", 0x2, 00) = 4
@@ -150,10 +150,50 @@ $42\pm\phi^4$
 \subsection*{\ul{Επίλυση}}
 Δημιουργούμε ένα νέο αρχείο με δικαιώματα ανάγνωσης και γραφής, και με χρήση του \eng{\texttt{dup2()}} του αναθέτουμε ως \eng{file descriptor} τον αριθμό 99.
 
+\vspace{5mm}
+
+\section*{\ul{Εμπόδιο 6}}
+\subsection*{\ul{Διάγνωση}}
+Παρατηρούμε ότι ο γρίφος γεννά δύο διεργασίες, ο πρώτη εκ των οποίων τυπώνει το \eng{\texttt{<PID> PING!}} στο \eng{\texttt{stdout}}, και η δεύτερη θέτει ένα χρονόμετρο των 2 δευτερολέπτων πριν διαβάσει από το \eng{file descriptor 33}, λαμβάνοντας τους τέσσερις πρώτους χαρακτήρες του \eng{username}.
+
 \langeng
-\begin{lstlisting}[language=c]
+\begin{lstlisting}[language=bash]
+[pid 23930] __fprintf_chk(0x7f3b9081a4a0, 1, "Hint:          '%s'.\n", "help us play!"Hint:          'help us play!'.
+)                    = 32
+[pid 23930] getenv("I_NEED_TECH_HINTS")                                                                    = nil
+[pid 23930] fork()                                                                                         = 23931
+[pid 23930] fork( <unfinished ...>
+[pid 23931] <... fork resumed> )                                                                           = 0
+[pid 23931] getpid( <unfinished ...>
+[pid 23930] <... fork resumed> )                                                                           = 23932
+[pid 23930] wait(0x7ffcb7efaa74 <unfinished ...>
+[pid 23932] <... fork resumed> )                                                                           = 0
+[pid 23932] alarm(2 <unfinished ...>
+[pid 23931] <... getpid resumed> )                                                                         = 23931
+[pid 23931] __printf_chk(1, "[%d] PING!\n", 23931 <unfinished ...>
+[pid 23932] <... alarm resumed> )                                                                          = 0
+[pid 23932] read(33 <no return ...>
+error: maximum array length seems negative
+, "admi", 4)                                                                                               = -1
+[pid 23932] alarm(0)                                                                                       = 2
+[23931] PING!
+[pid 23932] exit(1 <unfinished ...>
+[pid 23931] <... __printf_chk resumed> )                                                                   = 14
+[pid 23931] write(34, "", 4 <no return ...>
+[pid 23932] +++ exited (status 1) +++
+[pid 23930] --- SIGCHLD (Child exited) ---
+[pid 23930] <... wait resumed> )                                                                           = 23932
+[pid 23930] wait(0x7ffcb7efaa74 <unfinished ...>
+[pid 23931] <... write resumed> )                                                                          = -1
+[pid 23931] exit(1 <no return ...>
+[pid 23931] +++ exited (status 1) +++
+[pid 23930] --- SIGCHLD (Child exited) ---
+[pid 23930] <... wait resumed> )                                                                           = 23931
 \end{lstlisting}
 \langgrc
+\subsection*{\ul{Επίλυση}}
+Μεταβάλουμε το \eng{username} σε \eng{PONG}.
+
 
 \vspace{5mm}
 

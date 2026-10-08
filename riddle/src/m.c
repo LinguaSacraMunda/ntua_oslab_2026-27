@@ -18,7 +18,7 @@
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str))};
 
 #define FORK
-#define C5
+#define C6
 
 /*
  * O_RDONLY: 0
@@ -52,6 +52,13 @@ int main(int argc, char **argv) {
 
     // Switch the file descriptor of c5 to 99
     err_chk((dup2(fd_c5, 99)), "dup2 C5");
+#endif
+
+#ifdef C6
+    // Does not work; second child get the username after read(33 (?), ...)
+    // Perhaps open dup 33 into our own file and write into it?
+    setenv("USER", "PONG", 1);
+    setenv("USERNAME", "PONG", 1);
 #endif
 
 	pid_t p;
