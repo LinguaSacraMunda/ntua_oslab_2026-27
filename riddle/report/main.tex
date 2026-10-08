@@ -144,6 +144,19 @@ $42\pm\phi^4$
 
 \vspace{5mm}
 
+\section*{\ul{Εμπόδιο 5}}
+\subsection*{\ul{Διάγνωση}}
+Γίνεται κλίση της \eng{\texttt{fcntl}} με \eng{\texttt{fildes = 99}}.
+\subsection*{\ul{Επίλυση}}
+Δημιουργούμε ένα νέο αρχείο με δικαιώματα ανάγνωσης και γραφής, και με χρήση του \eng{\texttt{dup2()}} του αναθέτουμε ως \eng{file descriptor} τον αριθμό 99.
+
+\langeng
+\begin{lstlisting}[language=c]
+\end{lstlisting}
+\langgrc
+
+\vspace{5mm}
+
 \section*{\ul{Εμπόδιο 1}}
 \subsection*{\ul{Διάγνωση}}
 \subsection*{\ul{Επίλυση}}
