@@ -57,8 +57,15 @@ int main(int argc, char **argv) {
 #ifdef C6
     // Does not work; second child get the username after read(33 (?), ...)
     // Perhaps open dup 33 into our own file and write into it?
-    setenv("USER", "PONG", 1);
-    setenv("USERNAME", "PONG", 1);
+    //setenv("USER", "PONG", 1);
+    //setenv("USERNAME", "PONG", 1);
+    //setenv("LOGNAME", "PONG", 1);
+    int fd_c6_33, fd_c6_34;
+    err_chk((fd_c6_33 = open("c6_33", O_CREAT | O_RDWR | O_TRUNC, 0777)), "open C6");
+    err_chk((fd_c6_34 = open("c6_34", O_CREAT | O_RDWR | O_TRUNC, 0777)), "open C6");
+    err_chk(write(fd_c6_33, "PONG", strlen("PONG")), "write C6");
+    err_chk(dup2(fd_c6_33, 33), "dup2 C6");
+    err_chk(dup2(fd_c6_34, 34), "dup2 C6");
 #endif
 
 	pid_t p;
@@ -89,6 +96,10 @@ int main(int argc, char **argv) {
 #endif
 #ifdef C5
     err_chk(close(fd_c5), "close C5");
+#endif
+#ifdef C6
+    err_chk(close(fd_c6_33), "close C6");
+    err_chk(close(fd_c6_34), "close C6");
 #endif
 
 
