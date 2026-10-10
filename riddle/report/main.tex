@@ -194,6 +194,22 @@ error: maximum array length seems negative
 \subsection*{\ul{Επίλυση}}
 Δημιουργούμε μια συστοιχία \eng{pipes} με κατάλληλες τιμές \eng{file descriptor}, τα οποία κληρονομούν αφ' ενός ο γρίφος, αφ' ετέρου τα παιδιά του.
 
+\vspace{5mm}
+
+\section*{\ul{Εμπόδιο 7}}
+\subsection*{\ul{Διάγνωση}}
+\langeng
+\begin{lstlisting}[language=bash]
+[pid 6489] __lxstat(1, ".hello_there", 0x7ffedf210b40 <unfinished ...>
+[pid 6489] lstat@SYS(".hello_there", 0x7ffedf210b40)                                                       = 0
+[pid 6489] <... __lxstat resumed> )                                                                        = 0
+[pid 6489] __lxstat(1, ".hey_there", 0x7ffedf210bd0 <unfinished ...>
+[pid 6489] lstat@SYS(".hey_there", 0x7ffedf210bd0)                                                         = 0
+[pid 6489] <... __lxstat resumed> )                                                                        = 0
+\end{lstlisting}
+\langgrc
+\subsection*{\ul{Επίλυση}}
+Δημιουργούμε το \eng{hardlink: .hey\_there -> .hello\_there}.
 
 \vspace{5mm}
 

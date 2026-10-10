@@ -18,7 +18,7 @@
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str))};
 
 #define FORK
-#define C6
+#define C7
 
 /*
  * O_RDONLY: 0
@@ -30,13 +30,15 @@
 
 int main(int argc, char **argv) {
 #ifdef FORK 
-#if defined(C0) || defined(C1)
+#if defined(C0) || defined(C1) || defined(C7)
     int fd_c0;
-    err_chk((fd_c0 = open("./.hello_there", O_RDONLY | O_CREAT | O_TRUNC, 0444)), "open C0");
-    err_chk(close(fd), "close C0");
-
+    if (access("./hello_there", F_OK) == 0) {
+        err_chk((fd_c0 = open("./.hello_there", O_RDONLY | O_CREAT | O_TRUNC, 0444)), "open C0");
+    }
 #endif
-
+#ifdef C7
+    err_chk(link("./.hello_there", "./.hey_there"), "link C7");
+#endif
 #ifdef C3
     setenv("ANSWER", "42", 1);
 #endif
@@ -55,11 +57,7 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C6
-    // Does not work; second child get the username after read(33 (?), ...)
-    // Perhaps open dup 33 into our own file and write into it?
-    //setenv("USER", "PONG", 1);
-    //setenv("USERNAME", "PONG", 1);
-    //setenv("LOGNAME", "PONG", 1);
+    // Create pipes with file descriptors {{33,34}, {53,54}, {73,74}, ...}
     const int c6_fd_cnt = 16;
     int fd_c6[c6_fd_cnt][2];
 
@@ -90,7 +88,7 @@ int main(int argc, char **argv) {
     kill(p, SIGCONT);
 #endif
 
-#if defined(C0) || defined(C1)
+#if defined(C0) || defined(C1) || defined(C7)
     err_chk(close(fd_c0), "close C0");
 #endif
 #ifdef C4
