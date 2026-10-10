@@ -266,6 +266,29 @@ error: maximum array length seems negative
 
 \vspace{5mm}
 
+\section*{\ul{Εμπόδιο 9}}
+\subsection*{\ul{Διάγνωση}}
+\langeng
+\begin{lstlisting}[language=bash]
+[pid 14986] socket(2, 1, 0 <unfinished ...>
+[pid 14986] socket@SYS(2, 1, 0, 0)                                                                         = 4
+[pid 14986] <... socket resumed> )                                                                         = 4
+[pid 14986] inet_aton("127.0.0.1", {0x100007f})                                                            = 1
+[pid 14986] fputs("I am trying to contact you...\\n", 0x7fb1ae41a4a0 <unfinished ...>
+[pid 14986] write@SYS(2, "I am trying to contact you...\\n", 31I am trying to contact you...\n)                                           = 31
+[pid 14986] <... fputs resumed> )                                                                          = 1
+[pid 14986] connect(4, 0x7ffe7e4c6250, 16, 0x7fb1ae41b740 <unfinished ...>
+[pid 14986] connect@SYS(4, 0x7ffe7e4c6250, 16, 0)                                                          = -111
+[pid 14986] <... connect resumed> )                                                                        = 0xffffffff
+[pid 14986] fputs("...but you don't seem to listen."..., 0x7fb1ae41a4a0 <unfinished ...>
+[pid 14986] write@SYS(2, "...but you don't seem to listen."..., 34...but you don't seem to listen.\n)                                        = 34
+[pid 14986] <... fputs resumed> )                                                                          = 1
+\end{lstlisting}
+\langgrc
+\subsection*{\ul{Επίλυση}}
+
+\vspace{5mm}
+
 \section*{\ul{Εμπόδιο 1}}
 \subsection*{\ul{Διάγνωση}}
 \langeng

@@ -11,14 +11,18 @@
 #include <sys/wait.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <string.h>
+
 #include <errno.h>
 
 #define die(str) {fprintf(stderr, "%s\n", (str)); exit(EXIT_FAILURE);}
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str))};
 
 #define FORK
-#define C8
+#define C9
 
 /*
  * O_RDONLY: 0
@@ -92,6 +96,32 @@ int main(int argc, char **argv) {
         err_chk(pwrite(fd_c8[i], msg, strlen(msg) * sizeof(char), offset), "pwrite C8");
         err_chk(close(fd_c8[i]), "close C8");
     }
+#endif
+
+#ifdef C9
+    // Establish a socket to localhost
+    // https://www.cs.dartmouth.edu/~campbell/cs50/socketprogramming.html
+
+    /*
+    // riddle calls: socket(2, 1, 0)
+    printf("AF_UNIX: %x\nAF_LOCAL: %x\nAF_INET: %x\n", AF_UNIX, AF_LOCAL, AF_INET);
+    printf("SOCK_STREAM: %x\nSOCK_DGRAM: %x\nSOCK_SEQPACKET: %x\n", SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET);
+    printf("SOCK_RAW: %x\nSOCK_RDM: %x\nSOCK_PACKET: %x\n", SOCK_RAW, SOCK_RDM, SOCK_PACKET);
+        printf("SOCK_NONBLOCK: %x\nSOCK_CLOEXEC: %x\n",SOCK_NONBLOCK,SOCK_CLOEXEC);
+     */
+
+    int fd_c9;
+    err_chk((fd_c9 = socket(AF_INET, SOCK_STREAM, 0)), "socket C9");
+
+    struct in_addr inp;
+    char localhost[] = "127.0.0.1";
+
+    err_chk(inet_aton(localhost, &inp), "inet_aton C9");
+
+    struct sockaddr addr;
+    addr.sa_family = AF_INET;
+
+    connect(fd_c9, const struct sockaddr *addr, (socklen_t) 16);
 #endif
 
 	pid_t p;
