@@ -18,7 +18,7 @@
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str))};
 
 #define FORK
-#define C7
+#define C8
 
 /*
  * O_RDONLY: 0
@@ -32,13 +32,14 @@ int main(int argc, char **argv) {
 #ifdef FORK 
 #if defined(C0) || defined(C1) || defined(C7)
     int fd_c0;
-    if (access("./hello_there", F_OK) == 0) {
+    if (access("./hello_there", F_OK) == -1) {
         err_chk((fd_c0 = open("./.hello_there", O_RDONLY | O_CREAT | O_TRUNC, 0444)), "open C0");
     }
 #endif
 #ifdef C7
     err_chk(link("./.hello_there", "./.hey_there"), "link C7");
 #endif
+
 #ifdef C3
     setenv("ANSWER", "42", 1);
 #endif
@@ -58,13 +59,38 @@ int main(int argc, char **argv) {
 
 #ifdef C6
     // Create pipes with file descriptors {{33,34}, {53,54}, {73,74}, ...}
-    const int c6_fd_cnt = 16;
-    int fd_c6[c6_fd_cnt][2];
+    const int fd_c6_cnt = 16;
+    int fd_c6[fd_c6_cnt][2];
 
-    for (int i = 0; i < c6_fd_cnt; i++) {
+    for (int i = 0; i < fd_c6_cnt; i++) {
         err_chk((pipe(fd_c6[i])), "pipe C6");
         err_chk((dup2(fd_c6[i][0], 33 + 20 * i)), "dup2 C6 read end");
         err_chk((dup2(fd_c6[i][1], 34 + 20 * i)), "dup2 C6 write end");
+    }
+#endif
+
+#ifdef C8
+    // We shall cheat (!) by creating sparse files,
+    // supported by ext4. This solution should may not be portable.
+    // In vfat file systems the empty space is zero-filled.
+    // Equivalent of: dd if=/dev/zero of=bf00 bs=1k seek=1048576 count=1
+    const int fd_c8_cnt = 16;
+    int fd_c8[fd_c8_cnt];
+
+    // The riddle reads/writes 16 bytes
+    size_t rwlen = 16;              
+    off_t offset = 0x40000000LL;
+
+    // Message at file footer
+    char msg[] = "XXXXXXXXXXXXXXXX";
+
+    char buf[5];
+    for (int i = 0; i < fd_c8_cnt; i++) {
+        sprintf(buf, "bf0%d", i);
+        err_chk((fd_c8[i] = open(buf, O_CREAT | O_RDWR | O_TRUNC, 0777)), "open C8");
+        err_chk(ftruncate(fd_c8[i], offset + rwlen), "ftruncate C8");
+        err_chk(pwrite(fd_c8[i], msg, strlen(msg) * sizeof(char), offset), "pwrite C8");
+        err_chk(close(fd_c8[i]), "close C8");
     }
 #endif
 
@@ -98,12 +124,11 @@ int main(int argc, char **argv) {
     err_chk(close(fd_c5), "close C5");
 #endif
 #ifdef C6
-    for (int i = 0; i < c6_fd_cnt; i++) {
+    for (int i = 0; i < fd_c6_cnt; i++) {
         err_chk(close(fd_c6[i][0]), "close C6 read end");
         err_chk(close(fd_c6[i][1]), "close C6 write end");
     }
 #endif
-
 
 #ifdef FORK
 	int wstatus;

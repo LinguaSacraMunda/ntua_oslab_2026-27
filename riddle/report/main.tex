@@ -209,18 +209,71 @@ error: maximum array length seems negative
 \end{lstlisting}
 \langgrc
 \subsection*{\ul{Επίλυση}}
-Δημιουργούμε το \eng{hardlink: .hey\_there -> .hello\_there}.
+Δημιουργούμε το \eng{hardlink: .hey\_there $\rightarrow$ .hello\_there}.
+
+\vspace{5mm}
+
+\section*{\ul{Εμπόδιο 8}}
+\subsection*{\ul{Διάγνωση}}
+\langeng
+\begin{lstlisting}[language=bash]
+
+[pid 8452] open("bf00", 0, 021 <unfinished ...>
+[pid 8452] openat@SYS(AT_FDCWD, "bf00", 0, 00)                                                             = 4
+[pid 8452] <... open resumed> )                                                                            = 4
+[pid 8452] lseek(4, 1073741824, SEEK_SET <unfinished ...>
+[pid 8452] lseek@SYS(4, 1073741824, 0)                                                                     = 1073741824
+[pid 8452] <... lseek resumed> )                                                                           = 1073741824
+[pid 8452] read(4 <unfinished ...>
+[pid 8452] read@SYS(4, "", 16)                                                                             = 0
+[pid 8452] <... read resumed> , "", 16)                                                                    = 0
+[pid 8452] __printf_chk(1, "%s", "X" <unfinished ...>
+[pid 8452] fstat@SYS(1, 0x7fff263104a0)                                                                    = 0
+[pid 8452] <... __printf_chk resumed> )                                                                    = 1
+[pid 8452] fflush(0x7f8a7961a580 <unfinished ...>
+[pid 8452] write@SYS(1, "X", 1X)                                                                            = 1
+[pid 8452] <... fflush resumed> )                                                                          = 0
+[pid 8452] close(4 <unfinished ...>
+[pid 8452] close@SYS(4)                                                                                    = 0
+[pid 8452] <... close resumed> )                                                                           = 0
+...
+[pid 8452] write@SYS(1, "X", 1X)                                                                            = 1
+[pid 8452] <... fflush resumed> )                                                                          = 0
+[pid 8452] close(4 <unfinished ...>
+[pid 8452] close@SYS(4)                                                                                    = 0
+[pid 8452] <... close resumed> )                                                                           = 0
+[pid 8452] open("bf00", 0, 00 <unfinished ...>
+[pid 8452] openat@SYS(AT_FDCWD, "bf00", 0, 00)                                                             = 4
+[pid 8452] <... open resumed> )                                                                            = 4
+[pid 8452] lseek(4, 1073741824, SEEK_SET <unfinished ...>
+[pid 8452] lseek@SYS(4, 1073741824, 0)                                                                     = 1073741824
+[pid 8452] <... lseek resumed> )                                                                           = 1073741824
+[pid 8452] read(4 <unfinished ...>
+[pid 8452] read@SYS(4, "", 16)                                                                             = 0
+[pid 8452] <... read resumed> , "", 16)                                                                    = 0
+[pid 8452] __printf_chk(1, "%s", "X")                                                                      = 1
+[pid 8452] fflush(0x7f8a7961a580 <unfinished ...>
+[pid 8452] write@SYS(1, "X", 1X)                                                                            = 1
+[pid 8452] <... fflush resumed> )                                                                          = 0
+[pid 8452] close(4 <unfinished ...>
+[pid 8452] close@SYS(4)                                                                                    = 0
+[pid 8452] <... close resumed> )                                                                           = 0
+
+\end{lstlisting}
+\langgrc
+\subsection*{\ul{Επίλυση}}
+Πρέπει να φτιάξουμε ένα (σύστημα) αρχείο(/ων) που υποστηρίζει εγγραφή/ανάγνωση σε \eng{offset 1073741824 (0x40000000)}. Στην προκειμένη περίπτωση, αξιοποιούμε τη δυνατότητα του \eng{ext4} να δημιουργεί αραιά αρχεία χωρίς να τα γεμίζει με μηδενικά. Εναλλακτικά, θα μπορούσαμε να φτιάξουμε ένα σύστημα ψεύδο-αρχείων με χρήση του \eng{FUSE}, τα οποία φαινομενικά έχουν μέγεθος $1\unit{\giga\byte}$.
 
 \vspace{5mm}
 
 \section*{\ul{Εμπόδιο 1}}
 \subsection*{\ul{Διάγνωση}}
-\subsection*{\ul{Επίλυση}}
-
 \langeng
-\begin{lstlisting}[language=c]
+\begin{lstlisting}[language=bash]
 \end{lstlisting}
 \langgrc
+\subsection*{\ul{Επίλυση}}
+
 
 
 
