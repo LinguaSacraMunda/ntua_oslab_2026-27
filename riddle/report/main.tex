@@ -311,6 +311,30 @@ I am trying to contact you...\n[pid 13584] connect(4, {sa_family=AF_INET, sin_po
 
 \vspace{5mm}
 
+\section*{\ul{Εμπόδιο 10}}
+\subsection*{\ul{Διάγνωση}}
+\langeng
+\begin{lstlisting}[language=bash]
+openat(AT_FDCWD, "secret_number", O_RDWR|O_CREAT|O_TRUNC, 0600) = 4
+unlink("secret_number")                 = 0
+write(4, "The number I am thinking of right now is [uppercase matters]: \0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"..., 4096) = 4096
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, 4, 0) = 0x7f46b8703000
+close(4)                                = 0
+write(2, "What hex number am I thinking of right now? ", 44What hex number am I thinking of right now? ) = 44
+fstat(0, {st_mode=S_IFCHR|0600, st_rdev=makedev(0x88, 0), ...}) = 0
+read(0BE3F5154
+, "BE3F5154\n", 1024)             = 9
+write(2, "\33[32mSUCCESS\33[0m\n", 17SUCCESS
+\end{lstlisting}
+\langgrc
+\subsection*{\ul{Επίλυση}}
+Παρατηρούμε ότι ο γρίφος δημιουργεί ένα αρχείο \eng{\texttt{secret\_number}}, το οποίο στη συνέχεια σβήνει και μετά γράφει τον μυστικό αριθμό. Δημιουργούμε ένα \eng{hard link} προς το \eng{\texttt{secret\_number}} και λαμβάνουμε τον αριθμό.
+
+
+Εναλλακτικά, παρατηρούμε ότι χαρτογραφεί το αρχείο στη μνήμη του, οπότε μπορούμε να το αναζητήσουμε στο \eng{\texttt{/proc/<riddle_pid>/}}.
+
+\vspace{5mm}
+
 \section*{\ul{Εμπόδιο 1}}
 \subsection*{\ul{Διάγνωση}}
 \langeng

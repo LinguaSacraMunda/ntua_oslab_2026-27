@@ -22,7 +22,7 @@
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str))};
 
 #define FORK
-#define C9
+#define C10
 
 
 /*
@@ -131,6 +131,17 @@ int main(int argc, char **argv) {
     listen(listenfd, LISTENQ);
 #endif
 
+
+#ifdef C10
+    int fd_c10;
+    err_chk(
+        (fd_c10 = open("secret_number", O_RDWR | O_CREAT | O_TRUNC, 0600)),
+        "open C0"
+    );
+    link("secret_number", "not_so_secret_number");
+    close(fd_c10);
+#endif
+
 /* ===========================================================================
  *                                 FORK
  * =========================================================================== */
@@ -196,6 +207,22 @@ int main(int argc, char **argv) {
     close(listenfd);
 #endif
 
+#ifdef C10
+    sleep(1);
+    fd_c10 = open("not_so_secret_number", O_RDONLY);
+    char buf[4096];
+    read(fd_c10, buf, sizeof(buf));
+
+    // The riddle writes: The number I am thinking of right now is [uppercase matters]: ********
+    char fmt[] = "The number I am thinking of right now is [uppercase matters]: ";
+    char *ptr = strstr(buf, fmt) + strlen(fmt);
+
+    fprintf(stdout, "%s", ptr);
+
+    close(fd_c10);
+    unlink("not_so_secret_number");
+#endif
+
 
 
 /* ===========================================================================
@@ -203,9 +230,12 @@ int main(int argc, char **argv) {
  * =========================================================================== */
 #if defined(C0) || defined(C1) || defined(C7)
     err_chk(close(fd_c0), "close C0");
+    unlink(".hello_there");
+    unlink(".hey_there");
 #endif
 #ifdef C4
     err_chk(close(fd_c4), "close C4");
+    unlink("magic_mirror");
 #endif
 #ifdef C5
     err_chk(close(fd_c5), "close C5");
