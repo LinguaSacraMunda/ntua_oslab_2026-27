@@ -18,11 +18,44 @@
 
 #include <errno.h>
 
-#define die(str) {fprintf(stderr, "%s\n", (str)); exit(EXIT_FAILURE);}
+#define die(str) {fprintf(stderr, "errno: %s\n%s\n", strerror(errno), (str)); exit(EXIT_FAILURE);}
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str))};
 
 #define FORK
 #define C9
+
+// Establish a TCP Server through localhost
+// https://www.cs.dartmouth.edu/~campbell/cs50/socketprogramming.html
+int setup_TCP(void) {
+    const int MAXLINE = 4096;
+    const int SERV_PORT = 0;
+    const int LISTENQ = 8;
+
+    int listenfd, connfd, n;
+    socklen_t clilen;
+    char buf[MAXLINE];
+    struct sockaddr_in servaddr, cliaddr;
+    char localhost[] = "127.0.0.1";
+
+    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    memset(&servaddr, 0 ,sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    // Endianess shouldn't matter since SERV_PORT = 0
+    // ergo, let the kernel decide
+    servaddr.sin_port = htons(SERV_PORT);   
+    inet_aton(localhost, &servaddr.sin_addr);
+
+    err_chk(
+        bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr)),
+        "bind C9"
+    );
+    listen(listenfd, LISTENQ);
+
+
+    return 0;
+}
+
 
 /*
  * O_RDONLY: 0
@@ -33,7 +66,9 @@
  */
 
 int main(int argc, char **argv) {
-#ifdef FORK 
+/* ===========================================================================
+ *                              PRE-FORK
+ * =========================================================================== */
 #if defined(C0) || defined(C1) || defined(C7)
     int fd_c0;
     if (access("./hello_there", F_OK) == -1) {
@@ -75,7 +110,7 @@ int main(int argc, char **argv) {
 
 #ifdef C8
     // We shall cheat (!) by creating sparse files,
-    // supported by ext4. This solution should may not be portable.
+    // supported by ext4. This solution may not be portable.
     // In vfat file systems the empty space is zero-filled.
     // Equivalent of: dd if=/dev/zero of=bf00 bs=1k seek=1048576 count=1
     const int fd_c8_cnt = 16;
@@ -99,31 +134,39 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C9
-    // Establish a socket to localhost
+    // Establish a TCP Server through localhost
     // https://www.cs.dartmouth.edu/~campbell/cs50/socketprogramming.html
 
-    /*
-    // riddle calls: socket(2, 1, 0)
-    printf("AF_UNIX: %x\nAF_LOCAL: %x\nAF_INET: %x\n", AF_UNIX, AF_LOCAL, AF_INET);
-    printf("SOCK_STREAM: %x\nSOCK_DGRAM: %x\nSOCK_SEQPACKET: %x\n", SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET);
-    printf("SOCK_RAW: %x\nSOCK_RDM: %x\nSOCK_PACKET: %x\n", SOCK_RAW, SOCK_RDM, SOCK_PACKET);
-        printf("SOCK_NONBLOCK: %x\nSOCK_CLOEXEC: %x\n",SOCK_NONBLOCK,SOCK_CLOEXEC);
-     */
+    const int MAXLINE = 4096;
+    const int SERV_PORT = 8080;
+    const int LISTENQ = 8;
 
-    int fd_c9;
-    err_chk((fd_c9 = socket(AF_INET, SOCK_STREAM, 0)), "socket C9");
-
-    struct in_addr inp;
+    int listenfd, connfd;
+    socklen_t clilen;
+    char buf[MAXLINE];
+    struct sockaddr_in servaddr, cliaddr;
     char localhost[] = "127.0.0.1";
 
-    err_chk(inet_aton(localhost, &inp), "inet_aton C9");
+    listenfd = socket(AF_INET, SOCK_STREAM, 0);
 
-    struct sockaddr addr;
-    addr.sa_family = AF_INET;
+    memset(&servaddr, 0 ,sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    // Endianess shouldn't matter since SERV_PORT = 0
+    // ergo, let the kernel decide
+    servaddr.sin_port = htons(SERV_PORT);   
+    inet_aton(localhost, &servaddr.sin_addr);
 
-    connect(fd_c9, const struct sockaddr *addr, (socklen_t) 16);
+    err_chk(
+        bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr)),
+        "bind C9"
+    );
+    listen(listenfd, LISTENQ);
 #endif
 
+/* ===========================================================================
+ *                                 FORK
+ * =========================================================================== */
+#ifdef FORK 
 	pid_t p;
 	if ((p = fork()) == -1) {
 		perror("fork");
@@ -131,10 +174,17 @@ int main(int argc, char **argv) {
 	}
 
 	if (p == 0) {
+#ifdef C9
+        err_chk(close(listenfd), "close C9");
+#endif
 		char *const args[] = {NULL};
 		execv("./riddle", args);
 	}
 #endif
+
+/* ===========================================================================
+ *                              POST-FORK
+ * =========================================================================== */
 
 
 #ifdef C2
@@ -144,6 +194,42 @@ int main(int argc, char **argv) {
     kill(p, SIGCONT);
 #endif
 
+#ifdef C9
+    const int step_lim = 16;
+    int step = 0, n;
+
+
+    while (step < step_lim) {
+        clilen = sizeof(cliaddr);
+        err_chk(
+            (connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)),
+            "accept C9"
+        );
+
+        while ((n = recv(connfd, buf, MAXLINE, 0)) > 0) {
+            printf("%s","String received from and resent to the client:");
+            puts(buf);
+            send(connfd, buf, n, 0);
+        }
+        
+        if (n < 0) {
+            die("recv C9");
+        }
+
+        close(connfd);
+
+        usleep(100);
+        step++;
+    }
+
+    close(listenfd);
+#endif
+
+
+
+/* ===========================================================================
+ *                             CLEANUP 
+ * =========================================================================== */
 #if defined(C0) || defined(C1) || defined(C7)
     err_chk(close(fd_c0), "close C0");
 #endif
