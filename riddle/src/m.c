@@ -24,38 +24,6 @@
 #define FORK
 #define C9
 
-// Establish a TCP Server through localhost
-// https://www.cs.dartmouth.edu/~campbell/cs50/socketprogramming.html
-int setup_TCP(void) {
-    const int MAXLINE = 4096;
-    const int SERV_PORT = 0;
-    const int LISTENQ = 8;
-
-    int listenfd, connfd, n;
-    socklen_t clilen;
-    char buf[MAXLINE];
-    struct sockaddr_in servaddr, cliaddr;
-    char localhost[] = "127.0.0.1";
-
-    listenfd = socket(AF_INET, SOCK_STREAM, 0);
-
-    memset(&servaddr, 0 ,sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    // Endianess shouldn't matter since SERV_PORT = 0
-    // ergo, let the kernel decide
-    servaddr.sin_port = htons(SERV_PORT);   
-    inet_aton(localhost, &servaddr.sin_addr);
-
-    err_chk(
-        bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr)),
-        "bind C9"
-    );
-    listen(listenfd, LISTENQ);
-
-
-    return 0;
-}
-
 
 /*
  * O_RDONLY: 0
@@ -138,7 +106,7 @@ int main(int argc, char **argv) {
     // https://www.cs.dartmouth.edu/~campbell/cs50/socketprogramming.html
 
     const int MAXLINE = 4096;
-    const int SERV_PORT = 8080;
+    const int SERV_PORT = 49842;
     const int LISTENQ = 8;
 
     int listenfd, connfd;
@@ -195,11 +163,13 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C9
+    // Read riddle's message: How much is x + y ?
+    // and reply. Make at most step_lim tries before exiting
     const int step_lim = 16;
     int step = 0, n;
 
-
     while (step < step_lim) {
+        int d1, d2;
         clilen = sizeof(cliaddr);
         err_chk(
             (connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)),
@@ -208,8 +178,9 @@ int main(int argc, char **argv) {
 
         while ((n = recv(connfd, buf, MAXLINE, 0)) > 0) {
             printf("%s","String received from and resent to the client:");
-            puts(buf);
-            send(connfd, buf, n, 0);
+            sscanf(buf, "How much is %d + %d%s", &d1, &d2, NULL);
+            sprintf(buf, "%d", d1 + d2);
+            send(connfd, buf, strlen(buf), 0);
         }
         
         if (n < 0) {

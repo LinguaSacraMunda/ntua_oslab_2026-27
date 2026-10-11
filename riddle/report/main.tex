@@ -268,6 +268,7 @@ error: maximum array length seems negative
 
 \section*{\ul{Εμπόδιο 9}}
 \subsection*{\ul{Διάγνωση}}
+Έξοδος \eng{\texttt{ltrace -SCf}}:
 \langeng
 \begin{lstlisting}[language=bash]
 [pid 14986] socket(2, 1, 0 <unfinished ...>
@@ -285,7 +286,28 @@ error: maximum array length seems negative
 [pid 14986] <... fputs resumed> )                                                                          = 1
 \end{lstlisting}
 \langgrc
+
+\vspace{5mm}
+\noindent Έξοδος \eng{\texttt{strace -f -e trace=network -s 128}}:
+\langeng
+\begin{lstlisting}[language=bash]
+socket(AF_INET, SOCK_STREAM, IPPROTO_IP) = 3
+bind(3, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("127.0.0.1")}, 16) = 0
+listen(3, 8)                            = 0
+strace: Process 13584 attached
+[pid 13583] accept(3
+...
+Challenge   9: 'Connect'
+Hint:          'Let me whisper in your ear'.
+ <unfinished ...>
+[pid 13584] socket(AF_INET, SOCK_STREAM, IPPROTO_IP) = 4
+I am trying to contact you...\n[pid 13584] connect(4, {sa_family=AF_INET, sin_port=htons(49842), sin_addr=inet_addr("127.0.0.1")}, 16) = -1 ECONNREFUSED (Connection refused)
+...but you don't seem to listen.\nFAIL
+\end{lstlisting}
+\langgrc
+
 \subsection*{\ul{Επίλυση}}
+Δημιουργούμε ένα \eng{TCP server} στο 127.0.0.1:49842, βάσει της εξόδου του \eng{\texttt{strace}}, οπότε δεχόμαστε ένα μήνυμα της μορφής \eng{"How much is X + Y?"}, και απαντάμε με το άθροισμα των δύο αριθμών.
 
 \vspace{5mm}
 
