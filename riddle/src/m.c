@@ -213,7 +213,7 @@ int main(int argc, char **argv) {
     char buf[4096];
     read(fd_c10, buf, sizeof(buf));
 
-    // The riddle writes: The number I am thinking of right now is [uppercase matters]: ********
+    // The riddle writes: The number I am thinking of right now is [uppercase matters]: XXXXXXXX
     char fmt[] = "The number I am thinking of right now is [uppercase matters]: ";
     char *ptr = strstr(buf, fmt) + strlen(fmt);
 
