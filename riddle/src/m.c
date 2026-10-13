@@ -38,11 +38,16 @@ int main(int argc, char **argv) {
  *                              PRE-FORK
  * =========================================================================== */
 #if defined(C0) || defined(C1) || defined(C7)
-    int fd_c0;
-    if (access("./hello_there", F_OK) == -1) {
+    int fd_c0 = -1;
+    if (access("./.hello_there", F_OK) == -1) {
         err_chk((fd_c0 = open("./.hello_there", O_RDONLY | O_CREAT | O_TRUNC, 0444)), "open C0");
     }
 #endif
+
+#ifdef C1
+    err_chk(chmod("./.hello_there", 0444), "chmod C1");
+#endif
+
 #ifdef C7
     err_chk(link("./.hello_there", "./.hey_there"), "link C7");
 #endif
@@ -170,7 +175,7 @@ int main(int argc, char **argv) {
     // Make sure the riddle is running and has set up the alarm
     sleep(1);
     printf("sending SIGCONT signal to %d\n", p);
-    kill(p, SIGCONT);
+    err_chk(kill(p, SIGCONT), "kill C2");
 #endif
 
 #ifdef C9
@@ -228,11 +233,6 @@ int main(int argc, char **argv) {
 /* ===========================================================================
  *                             CLEANUP 
  * =========================================================================== */
-#if defined(C0) || defined(C1) || defined(C7)
-    err_chk(close(fd_c0), "close C0");
-    unlink(".hello_there");
-    unlink(".hey_there");
-#endif
 #ifdef C4
     err_chk(close(fd_c4), "close C4");
     unlink("magic_mirror");
@@ -251,5 +251,12 @@ int main(int argc, char **argv) {
 	int wstatus;
 	waitpid(p, &wstatus, 0);
 #endif
+
+#if defined(C0) || defined(C1) || defined(C7)
+    if (fd_c0 >= 0) err_chk(close(fd_c0), "close C0");
+    unlink(".hello_there");
+    unlink(".hey_there");
+#endif
+
 	return 0;
 }
