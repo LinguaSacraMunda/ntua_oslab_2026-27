@@ -22,7 +22,7 @@
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str));}
 
 #define FORK
-#define C11
+#define C4
 
 
 /*
@@ -57,8 +57,7 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C4
-    int fd_c4;
-    err_chk((fd_c4 = mkfifo("./magic_mirror", 0666)), "mkfifo C4");
+    err_chk((mkfifo("./magic_mirror", 0666)), "mkfifo C4");
 #endif
 
 #ifdef C5
@@ -238,10 +237,7 @@ int main(int argc, char **argv) {
 /* ===========================================================================
  *                             CLEANUP 
  * =========================================================================== */
-#ifdef C4
-    err_chk(close(fd_c4), "close C4");
-    unlink("magic_mirror");
-#endif
+
 #ifdef C5
     err_chk(close(fd_c5), "close C5");
 #endif
@@ -269,8 +265,12 @@ int main(int argc, char **argv) {
 
 #if defined(C0) || defined(C1) || defined(C7)
     if (fd_c0 >= 0) err_chk(close(fd_c0), "close C0");
-    unlink(".hello_there");
-    unlink(".hey_there");
+    err_chk(unlink(".hello_there"), "unlink C0");
+    err_chk(unlink(".hey_there"), "unlink C7");
+#endif
+
+#ifdef C4
+    err_chk(unlink("./magic_mirror"), "unlink C4");
 #endif
 
 	return 0;

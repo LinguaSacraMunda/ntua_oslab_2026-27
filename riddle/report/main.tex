@@ -162,23 +162,23 @@ columns=fullflexible
 
 \section*{\ul{Εμπόδιο 4}}
 \subsection*{\ul{Διάγνωση}}
-\langeng
-\begin{lstlisting}[language=bash]
 
-[pid 11536] open("magic_mirror", 0x2, 021 <unfinished ...>
-[pid 11536] openat@SYS(AT_FDCWD, "magic_mirror", 0x2, 00) = 4
-[pid 11536] <... open resumed> )                    = 4
-[pid 11536] rand()                                  = 1036441011
-[pid 11536] write(4, "V", 1 <unfinished ...>
-[pid 11536] write@SYS(4, "V", 1)                    = 1
-[pid 11536] <... write resumed> )                   = 1
-[pid 11536] read(4 <unfinished ...>
-[pid 11536] read@SYS(4, "", 1)                      = 0
+Ο γρίφος ανοίγει το αρχείο \eng{\texttt{magic\_mirror}} με \eng{\texttt{O\_RDWR}}, γράφει έναν χαρακτήρα και επιχειρεί να τον διαβάσει από τον ίδιο \eng{file descriptor}.
+Σε ένα κανονικό αρχείο, η \eng{\texttt{write()}} μετακινεί το \eng{file offset}, με αποτέλεσμα η \eng{\texttt{read()}} να επιστρέφει \eng{\texttt{0}} (\eng{EOF}).
 
-\end{lstlisting}
-\langgrc
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c4_1.png}
+\end{figure}
+
 \subsection*{\ul{Επίλυση}}
-Δημιουργούμε ένα \eng{named FIFO pipe} για τη διεργασία (βλ. \eng{\texttt{mkfifo(3)}}).
+Δημιουργούμε ένα \eng{named FIFO pipe} για τη διεργασία (βλ. \eng{\texttt{mkfifo(3)}}) πριν από τη \eng{\texttt{fork()}}.
+Σε αντίθεση με ένα κανονικό αρχείο, το \eng{FIFO} μεταφέρει δεδομένα μέσω \eng{buffer} του πυρήνα, χωρίς \eng{file offset}, επιτρέποντας στον γρίφο να διαβάσει τον χαρακτήρα που μόλις έγραψε.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c4_2.png}
+\end{figure}
 
 \vspace{5mm}
 
