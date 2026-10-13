@@ -19,10 +19,10 @@
 #include <errno.h>
 
 #define die(str) {fprintf(stderr, "errno: %s\n%s\n", strerror(errno), (str)); exit(EXIT_FAILURE);}
-#define err_chk(func, err_str) {if ((func) == -1) die((err_str))};
+#define err_chk(func, err_str) {if ((func) == -1) die((err_str));}
 
 #define FORK
-#define C10
+#define C11
 
 
 /*
@@ -223,6 +223,11 @@ int main(int argc, char **argv) {
     unlink("not_so_secret_number");
 #endif
 
+#ifdef C11
+    while (1)
+        sleep(1);
+#endif
+
 
 
 /* ===========================================================================
@@ -242,8 +247,18 @@ int main(int argc, char **argv) {
 #endif
 #ifdef C6
     for (int i = 0; i < fd_c6_cnt; i++) {
+        sprintf(buf, "bf0%d", i);
         err_chk(close(fd_c6[i][0]), "close C6 read end");
         err_chk(close(fd_c6[i][1]), "close C6 write end");
+        unlink(buf);
+    }
+#endif
+
+#ifdef C8
+
+    for (int i = 0; i < fd_c8_cnt; i++) {
+        sprintf(buf, "bf0%d", i);
+        unlink(buf);
     }
 #endif
 
