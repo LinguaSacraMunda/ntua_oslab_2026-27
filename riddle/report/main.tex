@@ -1,10 +1,12 @@
-\documentclass[13pt]{article}
+\documentclass[12pt]{article}
 
 \usepackage{amsmath}
 \usepackage{mathtools}
 \usepackage[utf8]{inputenc}
 \usepackage[english,greek]{babel}
 \usepackage{graphicx}
+\usepackage{float}
+\usepackage[export]{adjustbox}
 \graphicspath{{media/}}
 \usepackage[
   a4paper,
@@ -34,7 +36,10 @@ columns=fullflexible
 \title{Λειτουργικά Συστήματα Υπολογιστών\\[1.2ex]
         \Large Γρίφος}
 \date{\today}
-\author{Ίωνας Τσακίρης 03123077\footnote{\eng{el23077@mail.ntua.gr}}}
+\author{
+    Αλεξάνδρα Μυλωνά 03123004\footnote{\eng{el23004@mail.ntua.gr}}\\
+    Ίωνας Τσακίρης 03123077\footnote{\eng{el23077@mail.ntua.gr}}
+}
 
 
 % Definition of \maketitle
@@ -51,7 +56,7 @@ columns=fullflexible
     {\Large Σχολή Ηλεκτρολόγων Μηχανικών και Μηχανικών\\Υπολογιστών}
 \end{minipage}
 
-\\[16ex]
+\par\vspace{16ex}
 \begin{center}
 {\Huge \bfseries \@title }\\[4ex] 
 {\Large  \@author}\\[4ex] 
@@ -64,61 +69,94 @@ columns=fullflexible
 \maketitle
 \newpage
 \pagenumbering{arabic}
+
+\noindent\textbf{Σημείωση:}
+Για τη διερεύνηση των εμποδίων χρησιμοποιούμε τα εργαλεία \eng{\texttt{ltrace}} και \eng{\texttt{strace}}, ώστε να παρακολουθούμε τις κλήσεις συναρτήσεων βιβλιοθηκών και τις κλήσεις συστήματος του εκτελέσιμου.\\
+
+\noindent Η επίλυση αυτοματοποιείται μέσω προγράμματος σε \eng{C}, το οποίο διαμορφώνει το κατάλληλο περιβάλλον εκτέλεσης και εκκινεί τον γρίφο σε διεργασία-παιδί με χρήση των \eng{fork()} και \eng{execv()}.
+\vspace{5mm}
+
 \section*{\ul{Εμπόδιο 0}}
 \subsection*{\ul{Διάγνωση}}
-Χρησιμοποιόντας την \eng{\texttt{ltrace -SCf}} βλέπουμε την κλήση \eng{\texttt{open(".hello\_there", 0, 00)             = -1}}. 
+Χρησιμοποιώντας την \eng{\texttt{ltrace -SCf}} βλέπουμε την κλήση \eng{\texttt{open(".hello\_there", 0, 00)             = -1}}. Συμπεραίνουμε πως για την επίλυση απαιτείται η ύπαρξη του αρχείου \eng{\texttt{.hello\_there}} στον τρέχοντα κατάλογο εργασίας της διεργασίας.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c0_1.png}
+\end{figure}
 
 \subsection*{\ul{Επίλυση}}
-Δημιουργούμε το ζητούμενο αρχείο ώστε η κλήση να επιτυγχάνει.
+Δημιουργούμε το ζητούμενο αρχείο ώστε η κλήση να επιτυγχάνει, μέσω της \eng{\texttt{open()}} με \eng{flag} \eng{\texttt{O\_CREAT}}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c0_2.png}
+\end{figure}
 
 \vspace{5mm}
 
 \section*{\ul{Εμπόδιο 1}}
 \subsection*{\ul{Διάγνωση}}
-Όμοια, γίνεται κλήση της \eng{\texttt{open(..., O\_WRONLY, ...)}}, την οποία θέλουμε να αποτρέψουμε.
+Όμοια, βλέπουμε πως γίνεται κλήση της \eng{\texttt{open(..., O\_WRONLY, ...)}} (δηλαδή ζητείται πρόσβαση εγγραφής στο αρχείο \eng{\texttt{.hello\_there}}.), την οποία θέλουμε να αποτρέψουμε.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c1_1.png}
+\end{figure}
 
 \subsection*{\ul{Επίλυση}}
-Αλλάζουμε την επίτρεψη του αρχείου σε \texttt{0444}, δηλαδή σε \eng{read-only}.
+Αλλάζουμε την επίτρεψη του αρχείου σε \texttt{0444} (\eng{\texttt{r--r--r--}}), δηλαδή σε \eng{read-only}, χρησιμοποιώντας την \eng{\texttt{chmod()}}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c1_2.png}
+\end{figure}
+
 \vspace{5mm}
 
 \section*{\ul{Εμπόδιο 2}}
 \subsection*{\ul{Διάγνωση}}
-Από την κάτωθι έξοδο του \eng{\texttt{ltrace}}, παρατηρούμε ότι ο γρίφος θέτει ένα \eng{\texttt{alarm(10)}} και \eng{handlers} για τα \eng{\texttt{SIGCONT,\;SIGALRM}}.
+Από την κάτωθι έξοδο του \eng{\texttt{ltrace}}, παρατηρούμε ότι ο γρίφος θέτει ένα \eng{\texttt{alarm(10)}}, ένα \eng{\texttt{pause()}} και \eng{handlers} για τα \eng{\texttt{SIGCONT,\;SIGALRM}}.
+Το \eng{\texttt{alarm(10)}} προγραμματίζει την αποστολή του σήματος \eng{\texttt{SIGALRM}} μετά από περίπου 10 δευτερόλεπτα, ενώ το \eng{\texttt{pause()}} αναστέλλει την εκτέλεση της διεργασίας μέχρι να παραδοθεί κατάλληλο σήμα.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c2_1.png}
+\end{figure}
 
-\langeng
-\begin{lstlisting}[language=bash]
-[pid 9018] signal(SIGALRM, 0x55a93d360350 <unfinished ...>
-[pid 9018] rt_sigaction@SYS(14, 0x7ffc6c8159e0, 0x7ffc6c815a80, 8)                                         = 0
-[pid 9018] <... signal resumed> )                                                                          = nil
-[pid 9018] signal(SIGCONT, 0x55a93d360350 <unfinished ...>
-[pid 9018] rt_sigaction@SYS(18, 0x7ffc6c8159e0, 0x7ffc6c815a80, 8)                                         = 0
-[pid 9018] <... signal resumed> )                                                                          = nil
-[pid 9018] alarm(10 <unfinished ...>
-[pid 9018] alarm@SYS(10, 0x7ffc6c8159e0, 0, 8)                                                             = 0
-[pid 9018] <... alarm resumed> )                                                                           = 0
-[pid 9018] pause(10, 0x7ffc6c8159e0, 0, 0x7f68488e60ab <unfinished ...>
-[pid 9018] pause@SYS()                                                                                     = -514
-[pid 9018] --- SIGALRM (Alarm clock) ---
-[pid 9018] rt_sigreturn@SYS(14, 0x7ffc6c8150b0, 0x7ffc6c814f80, 0)                                         = -4
-\end{lstlisting}
-\langgrc
 \subsection*{\ul{Επίλυση}}
-Εκτελούμε τον γρίφο ως παιδί ενός άλλου προγράμματος, το οποίο του στέλνει \eng{\texttt{SIGCONT}} πρίν τη λήξη του χρονόμετρου.
+Εκτελούμε τον γρίφο ως παιδί ενός άλλου προγράμματος, το οποίο του στέλνει \eng{\texttt{SIGCONT}} πρίν τη λήξη του χρονόμετρου, μέσω της \eng{\texttt{kill(p, SIGCONT)}}.
+Όταν το σήμα παραδοθεί κατά την αναμονή στο \eng{\texttt{pause()}}, ενεργοποιείται ο αντίστοιχος \eng{handler} και η διεργασία μπορεί να συνεχίσει.
+Στην υλοποίησή μας χρησιμοποιείται η \eng{\texttt{sleep(1)}} πριν από την αποστολή του σήματος, ώστε να δoθεί χρόνος στo παιδί να φtάσeι στo \eng{\texttt{pause()}}.
+Η καθυστέρηση αυτή αποδεικνύεται επαρκής στην πράξη, αλλά δεν εξασφαλίζει αυστηρό συγχρονισμό μεταξύ των διεργασιών.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c2_2.png}
+\end{figure}
 
 \vspace{5mm}
 
 \section*{\ul{Εμπόδιο 3}}
 \subsection*{\ul{Διάγνωση}}
-Όμοια με το εμπόδιο 6 του αντίστοιχου γρίφου του εισαγωγικού μαθήματος.
-\langeng
-\begin{lstlisting}[language=bash]
-[pid 10048] getenv("ANSWER")                        = nil
-\end{lstlisting}
-\langgrc
+Όμοια με το εμπόδιο 6 του αντίστοιχου γρίφου του εισαγωγικού μαθήματος, παρατηρούμε ότι ο γρίφος καλεί την \eng{\texttt{getenv("ANSWER")}}, η οποία επιστρέφει \eng{\texttt{NULL}}, υποδεικνύοντας ότι η μεταβλητή περιβάλλοντος \eng{\texttt{ANSWER}} δεν έχει οριστεί.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c3_1.png}
+\end{figure}
+
 \subsection*{\ul{Επίλυση}}
-$42\pm\phi^4$
+
+Στο πρόγραμμα \eng{C} χρησιμοποιούμε την \eng{\texttt{setenv("ANSWER", "42", 1)}} πριν κάνουμε \eng{\texttt{fork()}}.
+Το παιδί κληρονομεί το περιβάλλον του γονέα και το διατηρεί κατά την \eng{\texttt{execv()}}, επιτρέποντας στον γρίφο να διαβάσει την επιθυμητή τιμή.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c3_2.png}
+\end{figure}
+
+% $42\pm\phi^4$ ???
 
 \vspace{5mm}
 
@@ -331,8 +369,7 @@ write(2, "\33[32mSUCCESS\33[0m\n", 17SUCCESS
 Παρατηρούμε ότι ο γρίφος δημιουργεί ένα αρχείο \eng{\texttt{secret\_number}}, το οποίο στη συνέχεια σβήνει και μετά γράφει τον μυστικό αριθμό. Δημιουργούμε ένα \eng{hard link} προς το \eng{\texttt{secret\_number}} και λαμβάνουμε τον αριθμό.
 
 
-Εναλλακτικά, παρατηρούμε ότι χαρτογραφεί το αρχείο στη μνήμη του, οπότε μπορούμε να το αναζητήσουμε στο \eng{\texttt{/proc/<riddle_pid>/}}.
-
+Εναλλακτικά, παρατηρούμε ότι χαρτογραφεί το αρχείο στη μνήμη του, οπότε μπορούμε να το αναζητήσουμε στο \eng{\texttt{/proc/<riddle\_pid>/}}.
 \vspace{5mm}
 
 \section*{\ul{Εμπόδιο 1}}
