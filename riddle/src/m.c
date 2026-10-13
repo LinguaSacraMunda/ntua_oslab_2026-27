@@ -224,10 +224,17 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C11
-    while (1)
-        sleep(1);
-#endif
+    pid_t c11;
+    err_chk((c11 = fork()), "fork C11");
 
+    if (c11 == 0) {
+        char *const args[] = {NULL};
+        execv("./C11.sh", args);
+    }
+    
+    int wstatus_c11;
+    waitpid(c11, &wstatus_c11, 0);
+#endif
 
 
 /* ===========================================================================
