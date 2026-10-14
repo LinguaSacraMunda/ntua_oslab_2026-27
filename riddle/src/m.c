@@ -147,7 +147,6 @@ int main(int argc, char **argv) {
     // output easier
     int pfd_C12[2];
     err_chk(pipe(pfd_C12), "pipe C12");
-
     err_chk(dup2(pfd_C12[1], STDERR_FILENO), "dup2 C12");
 #endif
 
@@ -246,7 +245,9 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C12
+    // Make sure the riddle has parsed the savegame up to C12
     sleep(2);
+
     // Obtain offset and msg from riddle output
     // msg example: I want to find the char 'X' at 0x7fc979be306f
     off_t offset;
@@ -272,7 +273,6 @@ int main(int argc, char **argv) {
             break;
         }
     }
-    //printf("%s\n\n\n", msg);
 
     // The riddle creates a file: /tmp/riddle-XXXXXX
     // which it maps to its memory
@@ -286,27 +286,27 @@ int main(int argc, char **argv) {
 
     fgets(tmp_path, sizeof(tmp_path), cmd_fd_c12);
 
-    printf("tmp_path: %s\n", tmp_path);
-    
     // fgets leaves a trailing \n, messing up the path
     tmp_path[strlen(tmp_path) - 1] = '\0';
     err_chk((fd_c12 = open(tmp_path, O_RDWR, 0600)), "open C12");
 
     // Block size of 0x1000 bytes
     offset %= 0x1000;
-    printf("writing '%c' to offset %x at fd %d\n", c, (unsigned int) offset, fd_c12);
+    printf("writing '%c' to offset %x in file %s\n", c, (unsigned int) offset, tmp_path);
     
     if (pwrite(fd_c12, &c, sizeof(c), offset) != sizeof(c)) {
         die("pwrite C12");
     }
 
+    /* Print riddle output in full
     usleep(100);
-
+    printf("%s\n", msg);
     err_chk(
         (rc = read(pfd_C12[0], msg, sizeof(msg)/sizeof(msg[0]))),
         "read C12"
     );
-
+    printf("%s\n", msg);
+    */
 #endif
 
 /* ===========================================================================
@@ -337,10 +337,20 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C8
-
     for (int i = 0; i < fd_c8_cnt; i++) {
         sprintf(buf, "bf0%d", i);
         unlink(buf);
+    }
+#endif
+
+#ifdef C12
+    err_chk(close(pfd_C12[0]), "close C12");
+    err_chk(close(pfd_C12[1]), "close C12");
+
+    err_chk(close(fd_c12), "close C12");
+
+    if (pclose(cmd_fd_c12) != 0) {
+        die("pclose C12");
     }
 #endif
 
