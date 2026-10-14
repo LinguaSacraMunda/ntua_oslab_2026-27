@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
     int pfd_C12[2];
     err_chk(pipe(pfd_C12), "pipe C12");
 
-    err_chk(dup2(pfd_C12[1], STDOUT_FILENO), "dup2 C12");
+    err_chk(dup2(pfd_C12[1], STDERR_FILENO), "dup2 C12");
 #endif
 
 /* ===========================================================================
@@ -246,6 +246,7 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C12
+    sleep(2);
     // Obtain offset and msg from riddle output
     // msg example: I want to find the char 'X' at 0x7fc979be306f
     off_t offset;
@@ -255,34 +256,56 @@ int main(int argc, char **argv) {
     while (1) {
         err_chk(
             (rc = read(pfd_C12[0], msg, sizeof(msg)/sizeof(msg[0]))),
-            "read C1"
+            "read C12"
         );
         if (rc == 0) {
-            usleep(100);
+            usleep(500);
             continue;
         }
 
         char *ptr = strstr(msg, "I want to find the char '");
         if (ptr == NULL) {
-            usleep(500);
+            usleep(100);
             continue;
         } else {
             sscanf(ptr, "I want to find the char '%c' at %x", &c, (unsigned int*) &offset);
+            break;
         }
     }
+    //printf("%s\n\n\n", msg);
 
-
-
+    // The riddle creates a file: /tmp/riddle-XXXXXX
+    // which it maps to its memory
     int fd_c12;
-    err_chk((fd_c12 = open("/tmp/riddle-QU2uSt", O_RDWR, 0600)), "open C12");
+    char tmp_path[64];
+    FILE *cmd_fd_c12 = popen("ls -la \"/proc/$(pidof riddle)/map_files\" | awk '/\\/tmp\\/riddle/ { print $NF }'", "r");
 
+    if (cmd_fd_c12 == NULL) {
+        die("popen C12");
+    }
 
-    printf("m: %s\n", msg);
-    exit(1);
+    fgets(tmp_path, sizeof(tmp_path), cmd_fd_c12);
+
+    printf("tmp_path: %s\n", tmp_path);
+    
+    // fgets leaves a trailing \n, messing up the path
+    tmp_path[strlen(tmp_path) - 1] = '\0';
+    err_chk((fd_c12 = open(tmp_path, O_RDWR, 0600)), "open C12");
+
+    // Block size of 0x1000 bytes
+    offset %= 0x1000;
+    printf("writing '%c' to offset %x at fd %d\n", c, (unsigned int) offset, fd_c12);
     
     if (pwrite(fd_c12, &c, sizeof(c), offset) != sizeof(c)) {
         die("pwrite C12");
     }
+
+    usleep(100);
+
+    err_chk(
+        (rc = read(pfd_C12[0], msg, sizeof(msg)/sizeof(msg[0]))),
+        "read C12"
+    );
 
 #endif
 
