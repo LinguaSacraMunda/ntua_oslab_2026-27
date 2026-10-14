@@ -28,6 +28,7 @@ columns=fullflexible
 }
 
 \newcommand{\eng}[1]{\foreignlanguage{english}{#1}}
+\newcommand{\engt}[1]{\foreignlanguage{english}{\texttt{#1}}}
 \newcommand{\langeng}{\selectlanguage{english}}
 \newcommand{\langgrc}{\selectlanguage{greek}}
 
@@ -343,6 +344,28 @@ write(2, "\33[32mSUCCESS\33[0m\n", 17SUCCESS
 Μη μπορώντας να χρησιμοποιήσουμε τη λύση του 10\textsuperscript{ου} εμποδίου, αναζητούμε τον αριθμό στην εικονική μνήμη του γρίφου.
 Συγκεκριμένα, μεταβαίνουμε στον κατάλογο \eng{\texttt{/proc/<riddle\_pid>/map\_files}} και βρίσκουμε τη χαρτογράφηση του αρχείου βάσει του ονόματος \eng{magic\_mirror} στην ανεπτυγμένη διεύθυνση των \eng{symlinks}. Εναλλακτικά, θα μπορούσαμε να χρησιμοποιήσουμε τη διεύθυνση εικονικής μνήμης που επιστρέφει η κλήση της \eng{\texttt{mmap()}}.
 Χάριν απλότητας, η λύση του εμποδίου 11 έχει υλοποιηθεί σε \eng{Bash} και παρατίθεται στο αρχείο \eng{\texttt{src/C11.sh}}.
+
+\vspace{5mm}
+
+\section*{\ul{Εμπόδιο 12}}
+\subsection*{\ul{Διάγνωση}}
+\langeng
+\begin{lstlisting}[language=bash]
+rt_sigprocmask(SIG_BLOCK, ~[], [], 8)   = 0
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_DROPPABLE|MAP_ANONYMOUS, -1, 0) = 0x7fc979be5000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fc979be4000
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+getrandom("\x31\x86\x87\xf5\x67\x84\xa1\xbf\x09\x83\x1a\xfc\xf4\x32\x17\x4e\xa2\x22\xbf\x82\xd3\xcb\x24\x2d\x20\x17\x18\xfa\x90\x5e\x69\xb0", 32, 0) = 32
+openat(AT_FDCWD, "/tmp/riddle-QU2uSt", O_RDWR|O_CREAT|O_EXCL, 0600) = 4
+ftruncate(4, 4096)                      = 0
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, 4, 0) = 0x7fc979be3000
+write(2, "I want to find the char 'X' at 0"..., 46I want to find the char 'X' at 0x7fc979be306f
+) = 46
+\end{lstlisting}
+\langgrc
+\subsection*{\ul{Επίλυση}}
+Ο γρίφος δημιουργεί το αρχείο \engt{/tmp/riddle-QU2uSt}, εξασφαλίζοντας την εκ νέου δημιουργία του με χρήση της μάσκας \engt{O\_EXCL}, και στη συνέχεια το χαρτογραφεί στη μνήμη του. Το ζητούμενο είναι να αποκτήσουμε πρόσβαση στο αρχείο αυτό, να μεταβούμε στο ζητούμενο \eng{offset} και να γράψουμε την αναμενώμενη συμβολοσειρά. Δεδομένου ότι το μέγεθος ενός μπλοκ μνήμης είναι 4\unit{\mega\byte}, λαμβάνουμε το \eng{offset} ως τη δοθείσα από τον γρίφο διεύθυνση $\mod 0x1000$.
+
 \vspace{5mm}
 
 \section*{\ul{Εμπόδιο 1}}

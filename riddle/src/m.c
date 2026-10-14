@@ -22,7 +22,7 @@
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str));}
 
 #define FORK
-#define C11
+#define C12
 
 
 /*
@@ -142,6 +142,15 @@ int main(int argc, char **argv) {
     close(fd_c10);
 #endif
 
+#ifdef C12
+    // Redirect stdout to a pipe, making reading the riddle's
+    // output easier
+    int pfd_C12[2];
+    err_chk(pipe(pfd_C12), "pipe C12");
+
+    err_chk(dup2(pfd_C12[1], STDOUT_FILENO), "dup2 C12");
+#endif
+
 /* ===========================================================================
  *                                 FORK
  * =========================================================================== */
@@ -236,6 +245,46 @@ int main(int argc, char **argv) {
     waitpid(c11, &wstatus_c11, 0);
 #endif
 
+#ifdef C12
+    // Obtain offset and msg from riddle output
+    // msg example: I want to find the char 'X' at 0x7fc979be306f
+    off_t offset;
+    char msg[2048], c;
+    ssize_t rc;
+
+    while (1) {
+        err_chk(
+            (rc = read(pfd_C12[0], msg, sizeof(msg)/sizeof(msg[0]))),
+            "read C1"
+        );
+        if (rc == 0) {
+            usleep(100);
+            continue;
+        }
+
+        char *ptr = strstr(msg, "I want to find the char '");
+        if (ptr == NULL) {
+            usleep(500);
+            continue;
+        } else {
+            sscanf(ptr, "I want to find the char '%c' at %x", &c, (unsigned int*) &offset);
+        }
+    }
+
+
+
+    int fd_c12;
+    err_chk((fd_c12 = open("/tmp/riddle-QU2uSt", O_RDWR, 0600)), "open C12");
+
+
+    printf("m: %s\n", msg);
+    exit(1);
+    
+    if (pwrite(fd_c12, &c, sizeof(c), offset) != sizeof(c)) {
+        die("pwrite C12");
+    }
+
+#endif
 
 /* ===========================================================================
  *                             CLEANUP 
@@ -245,13 +294,16 @@ int main(int argc, char **argv) {
     unlink(".hello_there");
     unlink(".hey_there");
 #endif
+
 #ifdef C4
     err_chk(close(fd_c4), "close C4");
     unlink("magic_mirror");
 #endif
+
 #ifdef C5
     err_chk(close(fd_c5), "close C5");
 #endif
+
 #ifdef C6
     for (int i = 0; i < fd_c6_cnt; i++) {
         sprintf(buf, "bf0%d", i);
