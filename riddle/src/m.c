@@ -146,6 +146,14 @@ int main(int argc, char **argv) {
     close(fd_c10);
 #endif
 
+#ifdef C12
+    // Redirect stdout to a pipe, making reading the riddle's
+    // output easier
+    int pfd_C12[2];
+    err_chk(pipe(pfd_C12), "pipe C12");
+    err_chk(dup2(pfd_C12[1], STDERR_FILENO), "dup2 C12");
+#endif
+
 /* ===========================================================================
  *                                 FORK
  * =========================================================================== */
@@ -228,11 +236,82 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C11
-    while (1)
-        sleep(1);
+    pid_t c11;
+    err_chk((c11 = fork()), "fork C11");
+
+    if (c11 == 0) {
+        char *const args[] = {NULL};
+        execv("./C11.sh", args);
+    }
+    
+    int wstatus_c11;
+    waitpid(c11, &wstatus_c11, 0);
 #endif
 
+#ifdef C12
+    // Make sure the riddle has parsed the savegame up to C12
+    sleep(2);
 
+    // Obtain offset and msg from riddle output
+    // msg example: I want to find the char 'X' at 0x7fc979be306f
+    off_t offset;
+    char msg[2048], c;
+    ssize_t rc;
+
+    while (1) {
+        err_chk(
+            (rc = read(pfd_C12[0], msg, sizeof(msg)/sizeof(msg[0]))),
+            "read C12"
+        );
+        if (rc == 0) {
+            usleep(500);
+            continue;
+        }
+
+        char *ptr = strstr(msg, "I want to find the char '");
+        if (ptr == NULL) {
+            usleep(100);
+            continue;
+        } else {
+            sscanf(ptr, "I want to find the char '%c' at %x", &c, (unsigned int*) &offset);
+            break;
+        }
+    }
+
+    // The riddle creates a file: /tmp/riddle-XXXXXX
+    // which it maps to its memory
+    int fd_c12;
+    char tmp_path[64];
+    FILE *cmd_fd_c12 = popen("ls -la \"/proc/$(pidof riddle)/map_files\" | awk '/\\/tmp\\/riddle/ { print $NF }'", "r");
+
+    if (cmd_fd_c12 == NULL) {
+        die("popen C12");
+    }
+
+    fgets(tmp_path, sizeof(tmp_path), cmd_fd_c12);
+
+    // fgets leaves a trailing \n, messing up the path
+    tmp_path[strlen(tmp_path) - 1] = '\0';
+    err_chk((fd_c12 = open(tmp_path, O_RDWR, 0600)), "open C12");
+
+    // Block size of 0x1000 bytes
+    offset %= 0x1000;
+    printf("writing '%c' to offset %x in file %s\n", c, (unsigned int) offset, tmp_path);
+    
+    if (pwrite(fd_c12, &c, sizeof(c), offset) != sizeof(c)) {
+        die("pwrite C12");
+    }
+
+    /* Print riddle output in full
+    usleep(100);
+    printf("%s\n", msg);
+    err_chk(
+        (rc = read(pfd_C12[0], msg, sizeof(msg)/sizeof(msg[0]))),
+        "read C12"
+    );
+    printf("%s\n", msg);
+    */
+#endif
 
 /* ===========================================================================
  *                             CLEANUP 
@@ -241,6 +320,7 @@ int main(int argc, char **argv) {
 #ifdef C5
     err_chk(close(fd_c5), "close C5");
 #endif
+
 #ifdef C6
     for (int i = 0; i < fd_c6_cnt; i++) {
         sprintf(buf, "bf0%d", i);
@@ -251,10 +331,20 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C8
-
     for (int i = 0; i < fd_c8_cnt; i++) {
         sprintf(buf, "bf0%d", i);
         unlink(buf);
+    }
+#endif
+
+#ifdef C12
+    err_chk(close(pfd_C12[0]), "close C12");
+    err_chk(close(pfd_C12[1]), "close C12");
+
+    err_chk(close(fd_c12), "close C12");
+
+    if (pclose(cmd_fd_c12) != 0) {
+        die("pclose C12");
     }
 #endif
 

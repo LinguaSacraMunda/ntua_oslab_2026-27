@@ -1,8 +1,8 @@
 #!/bin/bash
 PID="$(pgrep riddle)"
-if [ ! -z $PID ]; then
+if [ -n $PID ]; then
     PROC="/proc/$PID/map_files"
-    MEM="$(ls -la $PROC | grep '(deleted)' | awk ' { print $9 }')"
-    NUM="$(sudo cat $PROC/$MEM | awk ' { print $NF } ')"
-    echo $NUM
+    MEM="$(ls -la "$PROC" | awk '/\(deleted\)/ { print $9 }')"
+    sudo cat "$PROC/$MEM" | awk '{ print $NF }' | tr -cd '[:alnum:]'
+    echo
 fi
