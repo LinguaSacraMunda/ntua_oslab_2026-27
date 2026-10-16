@@ -22,7 +22,7 @@
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str));}
 
 #define FORK
-#define C12
+#define C13
 
 
 /*
@@ -32,6 +32,7 @@
  * O_CREAT: 64
  * O_TRUNC: 512
  */
+
 
 int main(int argc, char **argv) {
 /* ===========================================================================
@@ -106,7 +107,7 @@ int main(int argc, char **argv) {
     // https://www.cs.dartmouth.edu/~campbell/cs50/socketprogramming.html
 
     const int MAXLINE = 4096;
-    const int SERV_PORT = 49842;
+    const int SERV_PORT = 49842;        // Provided by the riddle through strace
     const int LISTENQ = 8;
 
     int listenfd, connfd;
@@ -119,8 +120,6 @@ int main(int argc, char **argv) {
 
     memset(&servaddr, 0 ,sizeof(servaddr));
     servaddr.sin_family = AF_INET;
-    // Endianess shouldn't matter since SERV_PORT = 0
-    // ergo, let the kernel decide
     servaddr.sin_port = htons(SERV_PORT);   
     inet_aton(localhost, &servaddr.sin_addr);
 
@@ -148,6 +147,14 @@ int main(int argc, char **argv) {
     int pfd_C12[2];
     err_chk(pipe(pfd_C12), "pipe C12");
     err_chk(dup2(pfd_C12[1], STDERR_FILENO), "dup2 C12");
+#endif
+
+#ifdef C13
+    // For clarity's sake, we split the file creating from cases
+    // C0, C1, C7
+    int fd_c13;
+    err_chk((fd_c13 = open("./.hello_there", O_RDWR | O_CREAT, 0600)), "open C13");
+
 #endif
 
 /* ===========================================================================
@@ -309,6 +316,12 @@ int main(int argc, char **argv) {
     */
 #endif
 
+#ifdef C13
+    sleep(3);
+    ftruncate(fd_c13, 0x8000);
+    fprintf(stderr, "[%d]: truncated .hello_there to 0x8000\n", getpid());
+#endif
+
 /* ===========================================================================
  *                             CLEANUP 
  * =========================================================================== */
@@ -352,6 +365,11 @@ int main(int argc, char **argv) {
     if (pclose(cmd_fd_c12) != 0) {
         die("pclose C12");
     }
+#endif
+
+#ifdef C13
+    err_chk(close(fd_c13), "close C13");
+    err_chk(unlink("./.hello_there"), "unlink C13");
 #endif
 
 #ifdef FORK

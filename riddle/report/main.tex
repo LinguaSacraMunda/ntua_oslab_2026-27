@@ -369,6 +369,31 @@ write(2, "I want to find the char 'X' at 0"..., 46I want to find the char 'X' at
 
 Σημειώνουμε ότι, αγνοώντας την επίκλιση προς την απλότητα της λύσης, λαμβάνουμε τη διεύθυνση και τον χαρακτήρα από τον γρίφο ανακατευθύνοντας την έξοδό του σε ένα \eng{pipe} προς τη γονεϊκή μας διεργασία, όπου την αναλύουμε. Απόρροια της επιλογης αυτής είναι η απόκρυψη του μηνύματος επιτυχίας από τον χρήστη.
 
+\vspace{5mm}
+
+\section*{\ul{Εμπόδιο 13}}
+\subsection*{\ul{Διάγνωση}}
+
+Δημιουργείται ένα αρχείο \engt{.hello\_there}, επεκτείνεται σε \engt{0x8000\unit{\byte}}, χαρτογραφείται στη μνήμη και στη συνέχεια περικόπτεται σε \engt{0x4000\unit{\byte}} με διαδοχικές κλήσεις της \engt{ftruncate}. Στη συνέχεια, ο γρίφος περιμένει έως ότου του δοθεί κάποια είσοδος, όποτε και αποπειράται να προσπελάσει να περικομμένη μνήμη.
+
+\langeng
+\begin{lstlisting}[language=bash]
+[pid 31180] open(".hello_there", 0x42, 0600 <unfinished ...>
+[pid 31180] openat@SYS(AT_FDCWD, ".hello_there", 0x42, 0600)                                               = 4
+[pid 31180] <... open resumed> )                                                                           = 4
+[pid 31180] ftruncate(4, 32768 <unfinished ...>
+[pid 31180] ftruncate@SYS(4, 32768)                                                                        = 0
+[pid 31180] <... ftruncate resumed> )                                                                      = 0
+[pid 31180] mmap(nil, 32768, 0b11, 0x1, 4, 0 <unfinished ...>
+[pid 31180] mmap@SYS(nil, 32768, 3, 1, 4, 0)                                                               = 0x7f61115f7000
+[pid 31180] <... mmap resumed> )                                                                           = 0x7f61115f7000
+[pid 31180] ftruncate(4, 16384 <unfinished ...>
+[pid 31180] ftruncate@SYS(4, 16384)                                                                        = 0
+[pid 31180] <... ftruncate resumed> )                                                                      = 0
+\end{lstlisting}
+\langgrc
+\subsection*{\ul{Επίλυση}}
+Όσο περιμένει ο γρίφος, καλούμε την \engt{ftruncate} και επανεπεκτείνουμε το αρχείο στα \engt{0x8000\unit{\byte}}, οπότε η μετέπειτα προσπέλαση επιτυγχάνει.
 
 \vspace{5mm}
 
