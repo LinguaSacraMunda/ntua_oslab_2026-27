@@ -397,13 +397,21 @@ write(2, "I want to find the char 'X' at 0"..., 46I want to find the char 'X' at
 
 \vspace{5mm}
 
-\section*{\ul{Εμπόδιο 1}}
+\section*{\ul{Εμπόδιο 14}}
 \subsection*{\ul{Διάγνωση}}
 \langeng
 \begin{lstlisting}[language=bash]
 \end{lstlisting}
 \langgrc
 \subsection*{\ul{Επίλυση}}
+
+\vspace{5mm}
+
+\section*{\ul{Εμπόδιο 1}}
+\subsection*{\ul{Διάγνωση}}
+Βάσει της υπόδειξς του γρίφου, απαιτεί να έχει \eng{PID = 32767}.
+\subsection*{\ul{Επίλυση}}
+Υπάρχουν δύο πιθανές λύσεις: η τροποποίηση του \engt{/proc/sys/kernel/ns\_last\_pid}, και η δημιουγία ενός νέου \engt{pid\_namespace(7)}. Εκ των δύο, καταφέραμε να υλοποιήσουμε τη δεύτερη, παρ' όλ' αυτά παρατίθουμε και τις δύο.
 
 
 

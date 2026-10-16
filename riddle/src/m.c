@@ -1,17 +1,20 @@
 #include <signal.h>
 #define _GNU_SOURCE
 #include <err.h>
+#include <linux/sched.h>
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/file.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
@@ -22,7 +25,15 @@
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str));}
 
 #define FORK
-#define C13
+#define C14
+
+#if defined(C11) || defined(C14)
+#define ROOT_ACCESS
+#endif
+
+#ifdef C14
+#undef FORK
+#endif
 
 
 /*
@@ -33,17 +44,54 @@
  * O_TRUNC: 512
  */
 
+#ifdef C14
+// After creating a new pid_namespace, let the new init (PID=1)
+// fork into a PID=32767 and execv into the riddle
+int pid_namespace_init(void) {
+    printf("innit pid: %d\n", getpid());
+    pid_t target_pid = 32767;
+
+    struct clone_args cargs;
+    memset(&cargs, 0, sizeof(cargs));
+
+    cargs.set_tid = (intptr_t) &target_pid;
+    cargs.set_tid_size = 1;
+    cargs.exit_signal = SIGCHLD;
+
+    long riddle_pid = syscall(SYS_clone3, &cargs, sizeof(cargs));
+
+    err_chk(riddle_pid, "clone3 C14");
+
+    if (riddle_pid == 0) {
+        char *const args[] = {NULL};
+        execv("./riddle", args);
+    }
+
+    int wstatus;
+    waitpid((pid_t) riddle_pid, &wstatus, 0);
+    return 0;
+}
+#endif
 
 int main(int argc, char **argv) {
 /* ===========================================================================
  *                              PRE-FORK
  * =========================================================================== */
+
+#ifdef ROOT_ACCESS
+    if (geteuid() != 0) {
+        fprintf(stderr, "This solution must be run as root\n");
+        exit(EXIT_FAILURE);
+    }
+#endif
+
 #if defined(C0) || defined(C1) || defined(C7)
     int fd_c0;
     if (access("./hello_there", F_OK) == -1) {
         err_chk((fd_c0 = open("./.hello_there", O_RDONLY | O_CREAT | O_TRUNC, 0444)), "open C0");
     }
 #endif
+
 #ifdef C7
     err_chk(link("./.hello_there", "./.hey_there"), "link C7");
 #endif
@@ -154,12 +202,55 @@ int main(int argc, char **argv) {
     // C0, C1, C7
     int fd_c13;
     err_chk((fd_c13 = open("./.hello_there", O_RDWR | O_CREAT, 0600)), "open C13");
+#endif
 
+#ifdef C14_ns_last_pid
+    printf("Are you running this in a VM? (y/n)?\n");
+    char ans = getchar();
+
+    if (!(ans == 'y' || ans == 'Y')) {
+        fprintf(stderr, "Wrong answer :(\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Solution based on:
+    // https://efiop-notes.blogspot.com/2014/06/how-to-set-pid-using-nslastpid.html
+
+    int fd_c14;
+    err_chk(
+        (fd_c14 = open("/proc/sys/kernel/ns_last_pid", O_RDWR | O_CREAT, 06444)),
+        "open C14"
+    );
+
+    // Place an exclusive lock on ns_last_pid
+    if (flock(fd_c14, LOCK_EX)) {
+        close(fd_c14);
+        fprintf(stderr, "flock C14");
+        exit(EXIT_FAILURE);
+    }
+
+    // Our target pid is 32767, so we set ns_last_pid to 32767 - 1;
+    char target_pid[] = "32766";
+    char last_pid[16];
+
+    if (read(fd_c14, last_pid, sizeof(last_pid)/sizeof(last_pid[0])) <= 0) {
+        fprintf(stderr, "read C14");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("\n\nlast_pid = %s\n\n\n", last_pid);
+
+    if (write(fd_c14, target_pid, strlen(target_pid)) != strlen(target_pid)) {
+        fprintf(stderr, "write C14");
+        exit(EXIT_FAILURE);
+    }
+    printf("\n\nwrite success\n\n\n");
 #endif
 
 /* ===========================================================================
  *                                 FORK
  * =========================================================================== */
+
 #ifdef FORK 
 	pid_t p;
 	if ((p = fork()) == -1) {
@@ -171,15 +262,36 @@ int main(int argc, char **argv) {
 #ifdef C9
         err_chk(close(listenfd), "close C9");
 #endif
-		char *const args[] = {NULL};
-		execv("./riddle", args);
+        char *const args[] = {NULL};
+        execv("./riddle", args);
 	}
+#endif
+
+#ifdef C14
+    struct clone_args cargs;
+    memset(&cargs, 0, sizeof(cargs));
+
+    cargs.flags = CLONE_NEWPID;
+    cargs.exit_signal = SIGCHLD;
+
+    printf("Pre-clone check\n");
+
+    long innit = syscall(SYS_clone3, &cargs, sizeof(cargs));
+
+    err_chk(innit, "clone3 C14");
+
+    if (innit == 0) {
+        int ret = pid_namespace_init();
+        exit(ret);
+    }
+
+    int wstatus;
+    waitpid((pid_t) innit, &wstatus, 0);
 #endif
 
 /* ===========================================================================
  *                              POST-FORK
  * =========================================================================== */
-
 
 #ifdef C2
     // Make sure the riddle is running and has set up the alarm
@@ -370,6 +482,20 @@ int main(int argc, char **argv) {
 #ifdef C13
     err_chk(close(fd_c13), "close C13");
     err_chk(unlink("./.hello_there"), "unlink C13");
+#endif
+
+#ifdef C14_ns_last_pid
+    sleep(3);
+    if (write(fd_c14, last_pid, strlen(last_pid)) != strlen(last_pid)) {
+        fprintf(stderr, "write C14");
+        exit(EXIT_FAILURE);
+    }
+    // Release the lock
+    if (flock(fd_c14, LOCK_UN)) {
+        fprintf(stderr, "flock C14");
+        exit(EXIT_FAILURE);
+    }
+    close(fd_c14);
 #endif
 
 #ifdef FORK
