@@ -36,7 +36,7 @@ columns=fullflexible
 
 \title{Λειτουργικά Συστήματα Υπολογιστών\\[1.2ex]
         \Large Γρίφος}
-\date{\today}
+\date{22 Οκτωβρίου 2026}
 \author{
     Αλεξάνδρα Μυλωνά 03123004\footnote{\eng{el23004@mail.ntua.gr}}\\
     Ίωνας Τσακίρης 03123077\footnote{\eng{el23077@mail.ntua.gr}}
@@ -433,7 +433,44 @@ write(2, "I want to find the char 'X' at 0"..., 46I want to find the char 'X' at
 Σημειώνουμε ότι, αγνοώντας την επίκλιση προς την απλότητα της λύσης, λαμβάνουμε τη διεύθυνση και τον χαρακτήρα από τον γρίφο ανακατευθύνοντας την έξοδό του σε ένα \eng{pipe} προς τη γονεϊκή μας διεργασία, όπου την αναλύουμε. Απόρροια της επιλογης αυτής είναι η απόκρυψη του μηνύματος επιτυχίας από τον χρήστη.
 
 \vspace{5mm}
-\noindent\textcolor{gray!40}{\hrulefill}~~\texttt{\small \eng{riddle: \textcolor{cyan}{Welcome back challenger. You may pass.}}}~~\textcolor{gray!40}{\hrulefill}
+
+\section*{\ul{Εμπόδιο 13}}
+\subsection*{\ul{Διάγνωση}}
+
+Δημιουργείται ένα αρχείο \engt{.hello\_there}, επεκτείνεται σε \engt{0x8000\unit{\byte}}, χαρτογραφείται στη μνήμη και στη συνέχεια περικόπτεται σε \engt{0x4000\unit{\byte}} με διαδοχικές κλήσεις της \engt{ftruncate}. Στη συνέχεια, ο γρίφος περιμένει έως ότου του δοθεί κάποια είσοδος, όποτε και αποπειράται να προσπελάσει να περικομμένη μνήμη.
+
+\langeng
+\begin{lstlisting}[language=bash]
+[pid 31180] open(".hello_there", 0x42, 0600 <unfinished ...>
+[pid 31180] openat@SYS(AT_FDCWD, ".hello_there", 0x42, 0600)                                               = 4
+[pid 31180] <... open resumed> )                                                                           = 4
+[pid 31180] ftruncate(4, 32768 <unfinished ...>
+[pid 31180] ftruncate@SYS(4, 32768)                                                                        = 0
+[pid 31180] <... ftruncate resumed> )                                                                      = 0
+[pid 31180] mmap(nil, 32768, 0b11, 0x1, 4, 0 <unfinished ...>
+[pid 31180] mmap@SYS(nil, 32768, 3, 1, 4, 0)                                                               = 0x7f61115f7000
+[pid 31180] <... mmap resumed> )                                                                           = 0x7f61115f7000
+[pid 31180] ftruncate(4, 16384 <unfinished ...>
+[pid 31180] ftruncate@SYS(4, 16384)                                                                        = 0
+[pid 31180] <... ftruncate resumed> )                                                                      = 0
+\end{lstlisting}
+\langgrc
+\subsection*{\ul{Επίλυση}}
+Όσο περιμένει ο γρίφος, καλούμε την \engt{ftruncate} και επανεπεκτείνουμε το αρχείο στα \engt{0x8000\unit{\byte}}, οπότε η μετέπειτα προσπέλαση επιτυγχάνει.
+
+\vspace{5mm}
+
+\section*{\ul{Εμπόδιο 14}}
+\subsection*{\ul{Διάγνωση}}
+Βάσει της υπόδειξης του γρίφου, απαιτεί να έχει \eng{PID = 32767}.
+\subsection*{\ul{Επίλυση}}
+Υπάρχουν δύο πιθανές λύσεις: η τροποποίηση του \engt{/proc/sys/kernel/ns\_last\_pid}, και η δημιουργία ενός νέου \engt{pid\_namespace(7)}. Εκ των δύο, καταφέραμε να υλοποιήσουμε τη δεύτερη, παρ' όλ' αυτά παρατίθενται και οι δύο κάτωθι για λόγους πληρότητας.
+
+Η πρώτη μέθοδος προϋποθέτει την ενεργοποίηση της σημαίας \engt{CONFIG\_CHECKPOINT\_RESTORE} στον πυρήνα, έτσι ώστε να καταγράφεται το τελευταίο \eng{PID} που χρησιμοποιήθηκε στο αρχείο \engt{ns\_last\_pid}.
+Τότε, αρκεί να ανοίξουμε το αρχείο αυτό - κλειδώνοντάς το κατάλληλα - και να γράψουμε το ζητούμενο \eng{PID - 1}, με αποτέλεσμα η διεργασία που προκύπτει από τον μετέπειτα \engt{fork} να έχει το επιθυμητό \eng{PID}.
+
+Εναλλακτικά, με χρήση της \engt{clone3(2)} μπορούμε να δημιουργήσουμε ένα ανεξάρτητο \engt{pid\_namespace} θέτοντας τη σημαία \engt{CLONE\_NEWPID} κατά τη δημιουργία της πρώτης διεργασίας του \eng{namespace}. Η τελευταία έχει όμοιο ρόλο με την \eng{init}, και μπορεί να ορίσει το \eng{PID} των παιδιών της - παροτρύνοντας την επιλογή από μια λίστα πιθανών \eng{PID}. Οπότε, καλόυμε για άλλη μια φορά την \engt{clone3}, δίδοντας ως μοναδική επιλογή τον ζητούμενο αριθμό.
+
 \vspace{5mm}
 
 \section*{\ul{Εμπόδιο 1}}
@@ -443,7 +480,6 @@ write(2, "I want to find the char 'X' at 0"..., 46I want to find the char 'X' at
 \end{lstlisting}
 \langgrc
 \subsection*{\ul{Επίλυση}}
-
 
 
 
