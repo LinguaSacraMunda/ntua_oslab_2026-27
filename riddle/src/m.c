@@ -114,18 +114,25 @@ int main(int argc, char **argv) {
 
     // Switch the file descriptor of c5 to 99
     err_chk((dup2(fd_c5, 99)), "dup2 C5");
+
+    if (fd_c5 != 99) err_chk(close(fd_c5), "close C5 original");
 #endif
 
 #ifdef C6
-    // Create pipes with file descriptors {{33,34}, {53,54}, {73,74}, ...}
-    const int fd_c6_cnt = 16;
+    // Create pipes with file descriptors {33,34} and {53,54}
+    const int fd_c6_cnt = 2;
     int fd_c6[fd_c6_cnt][2];
 
     for (int i = 0; i < fd_c6_cnt; i++) {
         err_chk((pipe(fd_c6[i])), "pipe C6");
         err_chk((dup2(fd_c6[i][0], 33 + 20 * i)), "dup2 C6 read end");
         err_chk((dup2(fd_c6[i][1], 34 + 20 * i)), "dup2 C6 write end");
+        
+        // Close original descriptors, keep duplicates
+        err_chk(close(fd_c6[i][0]), "close C6 original read end");
+        err_chk(close(fd_c6[i][1]), "close C6 original write end");
     }
+
 #endif
 
 #ifdef C8
@@ -441,16 +448,12 @@ int main(int argc, char **argv) {
  *                             CLEANUP 
  * =========================================================================== */
 
-#ifdef C5
-    err_chk(close(fd_c5), "close C5");
-#endif
-
 #ifdef C6
-    for (int i = 0; i < fd_c6_cnt; i++) {
-        sprintf(buf, "bf0%d", i);
-        err_chk(close(fd_c6[i][0]), "close C6 read end");
-        err_chk(close(fd_c6[i][1]), "close C6 write end");
-        unlink(buf);
+    if (p > 0) {
+        err_chk(close(33), "close C6 33");
+        err_chk(close(34), "close C6 34");
+        err_chk(close(53), "close C6 53");
+        err_chk(close(54), "close C6 54");
     }
 #endif
 
@@ -497,13 +500,21 @@ int main(int argc, char **argv) {
 #endif
 
 #if defined(C0) || defined(C1) || defined(C7)
-    if (fd_c0 >= 0) err_chk(close(fd_c0), "close C0");
-    err_chk(unlink(".hello_there"), "unlink C0");
+    if (fd_c0 >= 0)
+        err_chk(close(fd_c0), "close C0");
+#endif
+
+#ifdef C7
     err_chk(unlink(".hey_there"), "unlink C7");
 #endif
 
 #ifdef C4
     err_chk(unlink("./magic_mirror"), "unlink C4");
+#endif
+
+#ifdef C5
+    err_chk(close(99), "close C5 fd 99");
+    err_chk(unlink("c5"), "unlink C5");
 #endif
 
 	return 0;
