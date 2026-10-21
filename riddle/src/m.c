@@ -25,7 +25,15 @@
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str));}
 
 #define FORK
-#define C14
+#define C0
+#define C1
+#define C2
+#define C3
+#define C4
+#define C5
+#define C6
+#define C7
+#define C8
 
 #if defined(C11) || defined(C14)
 #define ROOT_ACCESS
@@ -140,7 +148,7 @@ int main(int argc, char **argv) {
     // supported by ext4. This solution may not be portable.
     // In vfat file systems the empty space is zero-filled.
     // Equivalent of: dd if=/dev/zero of=bf00 bs=1k seek=1048576 count=1
-    const int fd_c8_cnt = 16;
+    const int fd_c8_cnt = 10;
     int fd_c8[fd_c8_cnt];
 
     // The riddle reads/writes 16 bytes
@@ -153,7 +161,7 @@ int main(int argc, char **argv) {
     char buf[5];
     for (int i = 0; i < fd_c8_cnt; i++) {
         sprintf(buf, "bf0%d", i);
-        err_chk((fd_c8[i] = open(buf, O_CREAT | O_RDWR | O_TRUNC, 0777)), "open C8");
+        err_chk((fd_c8[i] = open(buf, O_CREAT | O_RDWR | O_TRUNC, 0666)), "open C8");
         err_chk(ftruncate(fd_c8[i], offset + rwlen), "ftruncate C8");
         err_chk(pwrite(fd_c8[i], msg, strlen(msg) * sizeof(char), offset), "pwrite C8");
         err_chk(close(fd_c8[i]), "close C8");
@@ -457,13 +465,6 @@ int main(int argc, char **argv) {
     }
 #endif
 
-#ifdef C8
-    for (int i = 0; i < fd_c8_cnt; i++) {
-        sprintf(buf, "bf0%d", i);
-        unlink(buf);
-    }
-#endif
-
 #ifdef C12
     err_chk(close(pfd_C12[0]), "close C12");
     err_chk(close(pfd_C12[1]), "close C12");
@@ -515,6 +516,13 @@ int main(int argc, char **argv) {
 #ifdef C5
     err_chk(close(99), "close C5 fd 99");
     err_chk(unlink("c5"), "unlink C5");
+#endif
+
+#ifdef C8
+    for (int i = 0; i < fd_c8_cnt; i++) {
+        sprintf(buf, "bf0%d", i);
+        err_chk(unlink(buf), "unlink C8");
+    }
 #endif
 
 	return 0;

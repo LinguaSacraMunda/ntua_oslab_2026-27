@@ -254,12 +254,7 @@ columns=fullflexible
 \section*{\ul{Εμπόδιο 7}}
 \subsection*{\ul{Διάγνωση}}
 
-Με το \eng{\texttt{strace}} παρατηρούμε ότι η
-\eng{\texttt{lstat()}} αρχικά αποτυγχάνει για το
-\eng{\texttt{.hey\_there}}. Όταν δημιουργούμε
-ανεξάρτητο αρχείο με αυτό το όνομα, ο γρίφος
-εξακολουθεί να αποτυγχάνει, καθώς οι αριθμοί
-\eng{inode} των δύο αρχείων διαφέρουν.
+Με το \eng{\texttt{strace}} παρατηρούμε ότι η \eng{\texttt{lstat()}} αρχικά αποτυγχάνει για το \eng{\texttt{.hey\_there}}. Όταν δημιουργούμε ανεξάρτητο αρχείο με αυτό το όνομα, ο γρίφος εξακολουθεί να αποτυγχάνει, καθώς οι αριθμοί \eng{inode} των δύο αρχείων διαφέρουν.
 
 \begin{figure}[H]
     \centering
@@ -268,11 +263,7 @@ columns=fullflexible
 
 \subsection*{\ul{Επίλυση}}
 
-Δημιουργούμε με τη \eng{\texttt{link()}} ένα
-\eng{hard link} με όνομα \eng{\texttt{.hey\_there}}
-προς το \eng{\texttt{.hello\_there}}, ώστε
-τα δύο ονόματα να αντιστοιχούν στο ίδιο
-\eng{inode}. Το νέο όνομα πρέπει να μην προϋπάρχει.
+Δημιουργούμε με τη \eng{\texttt{link()}} ένα \eng{hard link} με όνομα \eng{\texttt{.hey\_there}} προς το \eng{\texttt{.hello\_there}}, ώστε τα δύο ονόματα να αντιστοιχούν στο ίδιο \eng{inode}. Το νέο όνομα πρέπει να μην προϋπάρχει.
 
 \begin{figure}[H]
     \centering
@@ -285,56 +276,37 @@ columns=fullflexible
 
 \section*{\ul{Εμπόδιο 8}}
 \subsection*{\ul{Διάγνωση}}
-\langeng
-\begin{lstlisting}[language=bash]
 
-[pid 8452] open("bf00", 0, 021 <unfinished ...>
-[pid 8452] openat@SYS(AT_FDCWD, "bf00", 0, 00)                                                             = 4
-[pid 8452] <... open resumed> )                                                                            = 4
-[pid 8452] lseek(4, 1073741824, SEEK_SET <unfinished ...>
-[pid 8452] lseek@SYS(4, 1073741824, 0)                                                                     = 1073741824
-[pid 8452] <... lseek resumed> )                                                                           = 1073741824
-[pid 8452] read(4 <unfinished ...>
-[pid 8452] read@SYS(4, "", 16)                                                                             = 0
-[pid 8452] <... read resumed> , "", 16)                                                                    = 0
-[pid 8452] __printf_chk(1, "%s", "X" <unfinished ...>
-[pid 8452] fstat@SYS(1, 0x7fff263104a0)                                                                    = 0
-[pid 8452] <... __printf_chk resumed> )                                                                    = 1
-[pid 8452] fflush(0x7f8a7961a580 <unfinished ...>
-[pid 8452] write@SYS(1, "X", 1X)                                                                            = 1
-[pid 8452] <... fflush resumed> )                                                                          = 0
-[pid 8452] close(4 <unfinished ...>
-[pid 8452] close@SYS(4)                                                                                    = 0
-[pid 8452] <... close resumed> )                                                                           = 0
-...
-[pid 8452] write@SYS(1, "X", 1X)                                                                            = 1
-[pid 8452] <... fflush resumed> )                                                                          = 0
-[pid 8452] close(4 <unfinished ...>
-[pid 8452] close@SYS(4)                                                                                    = 0
-[pid 8452] <... close resumed> )                                                                           = 0
-[pid 8452] open("bf00", 0, 00 <unfinished ...>
-[pid 8452] openat@SYS(AT_FDCWD, "bf00", 0, 00)                                                             = 4
-[pid 8452] <... open resumed> )                                                                            = 4
-[pid 8452] lseek(4, 1073741824, SEEK_SET <unfinished ...>
-[pid 8452] lseek@SYS(4, 1073741824, 0)                                                                     = 1073741824
-[pid 8452] <... lseek resumed> )                                                                           = 1073741824
-[pid 8452] read(4 <unfinished ...>
-[pid 8452] read@SYS(4, "", 16)                                                                             = 0
-[pid 8452] <... read resumed> , "", 16)                                                                    = 0
-[pid 8452] __printf_chk(1, "%s", "X")                                                                      = 1
-[pid 8452] fflush(0x7f8a7961a580 <unfinished ...>
-[pid 8452] write@SYS(1, "X", 1X)                                                                            = 1
-[pid 8452] <... fflush resumed> )                                                                          = 0
-[pid 8452] close(4 <unfinished ...>
-[pid 8452] close@SYS(4)                                                                                    = 0
-[pid 8452] <... close resumed> )                                                                           = 0
+Με το \eng{\texttt{strace}} παρατηρούμε ότι το πρόγραμμα προσπαθεί να ανοίξει τα αρχεία \eng{\texttt{bf00}} έως \eng{\texttt{bf09}} και να διαβάσει 16 \eng{bytes} από τη θέση \eng{\texttt{0x40000000}} (1 \eng{GiB}).
+Η δημιουργία κενών αρχείων δεν επαρκεί, ενώ η ανάγνωση 16 μηδενικών \eng{bytes} επίσης οδηγεί σε αποτυχία.
+Διαπιστώνουμε ότι απαιτούνται 16 χαρακτήρες \eng{\texttt{X}} στη συγκεκριμένη θέση.
 
-\end{lstlisting}
-\langgrc
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c8_1.png}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c8_2.png}
+\end{figure}
+
 \subsection*{\ul{Επίλυση}}
-Αρκεί να δημιουργήσουμε μία συστοιχία αρχείων, τα οποία υποστηρίζουν εγγραφή και ανάγνωση, με μέγεθος 1073741824 (1.1\unit{\giga\byte}). Στην προκειμένη περίπτωση, αξιοποιούμε τη δυνατότητα του συστήματος αρχείων \eng{ext4} να υποστηρίζει αραιά αρχεία, όπου τυχόν «τρύπες» μεγάλης έκτασης δε γεμίζονται με μηδενικά, όπως στο \eng{vfat}. Έτσι, το πραγματικό μέγεθος των αρχείων είναι πολύ πιό μικρό από το απαιτούμενο.
+Αρκεί να δημιουργήσουμε μία συστοιχία 10 αρχείων, τα οποία υποστηρίζουν εγγραφή και ανάγνωση, με λογικό μέγεθος 1073741840 (\eng{1 GiB + 16 bytes}). Στην προκειμένη περίπτωση, αξιοποιούμε τη δυνατότητα του συστήματος αρχείων \eng{ext4} να υποστηρίζει αραιά αρχεία, όπου τυχόν «τρύπες» μεγάλης έκτασης δε γεμίζονται με μηδενικά, όπως στο \eng{vfat}. Έτσι, το πραγματικό μέγεθος των αρχείων είναι πολύ πιό μικρό από το απαιτούμενο.
 
-Εναλλακτικά, με χρήση του \eng{FUSE} θα μπορούσαμε να κατασκευάσουμε ένα σύστημα ψεύδο-αρχείων, τα οποία φαινομενικά έχουν το ζητούμενο μέγεθος και οι κλήσεις ανάγνωσης επιστρέφουν μια συμβολοσειρά της επιλογής μας.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c8_3.png}
+\end{figure}
+
+\noindent Εναλλακτικά, με χρήση του \eng{FUSE} θα μπορούσαμε να κατασκευάσουμε ένα σύστημα ψεύδο-αρχείων, τα οποία φαινομενικά έχουν το ζητούμενο μέγεθος και οι κλήσεις ανάγνωσης επιστρέφουν μια συμβολοσειρά της επιλογής μας.
+
+\noindent Με την \eng{\texttt{pwrite()}} γράφουμε 16 χαρακτήρες \eng{\texttt{X}} στη θέση \eng{1 GiB} κάθε αρχείου.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{media/c8_4.png}
+\end{figure}
 
 \vspace{5mm}
 \noindent\textcolor{gray!40}{\hrulefill}~~\texttt{\small \eng{riddle: \textcolor{cyan}{Welcome back challenger. You may pass.}}}~~\textcolor{gray!40}{\hrulefill}
