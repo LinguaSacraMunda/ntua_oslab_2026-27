@@ -203,12 +203,21 @@ int main(int argc, char **argv) {
 
 #ifdef C10
     int fd_c10;
+    int pipe_c10[2];
+    
+    // Remove leftover link from previous runs
+    if (unlink("not_so_secret_number") == -1 && errno != ENOENT)
+        die("unlink old C10");
+
     err_chk(
         (fd_c10 = open("secret_number", O_RDWR | O_CREAT | O_TRUNC, 0600)),
-        "open C0"
+        "open C10"
     );
-    link("secret_number", "not_so_secret_number");
-    close(fd_c10);
+    err_chk(link("secret_number", "not_so_secret_number"), "link C10");
+    err_chk(close(fd_c10), "close C10");
+
+    // Parent will write the answer to child's stdin
+    err_chk(pipe(pipe_c10), "pipe C10");
 #endif
 
 #ifdef C12
@@ -283,6 +292,15 @@ int main(int argc, char **argv) {
 	if (p == 0) {
 #ifdef C9
         err_chk(close(listenfd), "close C9");
+#endif
+
+#ifdef C10
+    // Child reads from the pipe through stdin (fd 0)
+    err_chk(close(pipe_c10[1]), "close C10 child write end");
+    err_chk(dup2(pipe_c10[0], STDIN_FILENO), "dup2 C10");
+
+    if (pipe_c10[0] != STDIN_FILENO)
+        err_chk(close(pipe_c10[0]), "close C10 child read end");
 #endif
         char *const args[] = {NULL};
         execv("./riddle", args);
@@ -363,19 +381,37 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C10
+    err_chk(close(pipe_c10[0]), "close C10 parent read end");
     sleep(1);
-    fd_c10 = open("not_so_secret_number", O_RDONLY);
-    char buf[4096];
-    read(fd_c10, buf, sizeof(buf));
 
+    err_chk((fd_c10 = open("not_so_secret_number", O_RDONLY)), "open C10");
+
+    char buf_c10[4096];
+    ssize_t n_c10 = read(fd_c10, buf_c10, sizeof(buf_c10) - 1);
+    err_chk(n_c10, "read C10");
+    buf_c10[n_c10] = '\0';
+    
     // The riddle writes: The number I am thinking of right now is [uppercase matters]: XXXXXXXX
     char fmt[] = "The number I am thinking of right now is [uppercase matters]: ";
-    char *ptr = strstr(buf, fmt) + strlen(fmt);
+    char *ptr = strstr(buf_c10, fmt) + strlen(fmt);
 
-    fprintf(stdout, "%s", ptr);
+    // Extract the hexadecimal number
+    size_t len = strspn(ptr, "0123456789ABCDEFabcdef");
 
-    close(fd_c10);
-    unlink("not_so_secret_number");
+    char answer_c10[64];
+    memcpy(answer_c10, ptr, len);
+    answer_c10[len] = '\n';
+
+    // Send the answer to Riddle's stdin
+    ssize_t sent = write(pipe_c10[1], answer_c10, len + 1);
+    err_chk(sent, "write C10");
+
+    if (sent != (ssize_t)(len + 1))
+        die("Incomplete write C10");
+
+    err_chk(close(pipe_c10[1]), "close C10 pipe");
+    err_chk(close(fd_c10), "close C10 fd");
+    err_chk(unlink("not_so_secret_number"), "unlink C10");
 #endif
 
 #ifdef C11
