@@ -25,15 +25,7 @@
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str));}
 
 #define FORK
-#define C0
-#define C1
-#define C2
-#define C3
-#define C4
-#define C5
-#define C6
-#define C7
-#define C8
+#define C11
 
 #if defined(C11) || defined(C14)
 #define ROOT_ACCESS
@@ -220,6 +212,11 @@ int main(int argc, char **argv) {
     err_chk(pipe(pipe_c10), "pipe C10");
 #endif
 
+#ifdef C11
+    int pipe_c11[2];
+    err_chk(pipe(pipe_c11), "pipe C11");
+#endif
+
 #ifdef C12
     // Redirect stdout to a pipe, making reading the riddle's
     // output easier
@@ -301,6 +298,18 @@ int main(int argc, char **argv) {
 
     if (pipe_c10[0] != STDIN_FILENO)
         err_chk(close(pipe_c10[0]), "close C10 child read end");
+#endif
+
+#ifdef C11
+    err_chk(close(pipe_c11[1]), "close C11 child write");
+
+    err_chk(
+        dup2(pipe_c11[0], STDIN_FILENO),
+        "dup2 C11 stdin"
+    );
+
+    if (pipe_c11[0] != STDIN_FILENO)
+        err_chk(close(pipe_c11[0]), "close C11 child read");
 #endif
         char *const args[] = {NULL};
         execv("./riddle", args);
@@ -414,18 +423,35 @@ int main(int argc, char **argv) {
     err_chk(unlink("not_so_secret_number"), "unlink C10");
 #endif
 
+
 #ifdef C11
     pid_t c11;
     err_chk((c11 = fork()), "fork C11");
 
     if (c11 == 0) {
+        // Redirect script stdout to pipe
+        err_chk(close(pipe_c11[0]), "close C11 script read");
+
+        err_chk(
+            dup2(pipe_c11[1], STDOUT_FILENO),
+            "dup2 C11 stdout"
+        );
+
+        if (pipe_c11[1] != STDOUT_FILENO)
+            err_chk(close(pipe_c11[1]), "close C11 script write");
+
         char *const args[] = {NULL};
         execv("./C11.sh", args);
     }
-    
+
+    // Parent doesn't need either pipe end
+    err_chk(close(pipe_c11[0]), "close C11 parent read");
+    err_chk(close(pipe_c11[1]), "close C11 parent write");
+
     int wstatus_c11;
-    waitpid(c11, &wstatus_c11, 0);
+    err_chk(waitpid(c11, &wstatus_c11, 0), "waitpid C11");
 #endif
+
 
 #ifdef C12
     // Make sure the riddle has parsed the savegame up to C12
