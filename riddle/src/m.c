@@ -182,18 +182,22 @@ int main(int argc, char **argv) {
     struct sockaddr_in servaddr, cliaddr;
     char localhost[] = "127.0.0.1";
 
-    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    err_chk((listenfd = socket(AF_INET, SOCK_STREAM, 0)), "socket C9");
 
     memset(&servaddr, 0 ,sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(SERV_PORT);   
-    inet_aton(localhost, &servaddr.sin_addr);
+
+    if (inet_aton(localhost, &servaddr.sin_addr) == 0) {
+        fprintf(stderr, "inet_aton C9 failed\n");
+        exit(EXIT_FAILURE);
+    }
 
     err_chk(
         bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr)),
         "bind C9"
     );
-    listen(listenfd, LISTENQ);
+    err_chk(listen(listenfd, LISTENQ), "listen C9");
 #endif
 
 
@@ -319,37 +323,43 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef C9
-    // Read riddle's message: How much is x + y ?
-    // and reply. Make at most step_lim tries before exiting
+    // Read riddle's message: How much is mypid + 1?
+    // and reply.
     const int step_lim = 16;
     int step = 0, n;
 
-    while (step < step_lim) {
-        int d1, d2;
-        clilen = sizeof(cliaddr);
-        err_chk(
-            (connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)),
-            "accept C9"
-        );
+    clilen = sizeof(cliaddr);
+    err_chk(
+        (connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)),
+        "accept C9"
+    );
 
-        while ((n = recv(connfd, buf, MAXLINE, 0)) > 0) {
-            printf("%s","String received from and resent to the client:");
-            sscanf(buf, "How much is %d + %d%s", &d1, &d2, NULL);
-            sprintf(buf, "%d", d1 + d2);
-            send(connfd, buf, strlen(buf), 0);
-        }
-        
-        if (n < 0) {
-            die("recv C9");
-        }
+    err_chk(
+        (n = recv(connfd, buf, MAXLINE - 1, 0)),
+        "recv C9"
+    );
 
-        close(connfd);
-
-        usleep(100);
-        step++;
+    if (n == 0) {
+        fprintf(stderr, "Connection closed C9\n");
+        exit(EXIT_FAILURE);
     }
 
-    close(listenfd);
+    buf[n] = '\0';
+
+    // Calculate the answer using the child's PID
+    snprintf(buf, MAXLINE, "%ld", (long)p + 1);
+
+    // Send the answer to the riddle
+    ssize_t sent = send(connfd, buf, strlen(buf), 0);
+    err_chk(sent, "send C9");
+
+    if ((size_t)sent != strlen(buf)) {
+        fprintf(stderr, "Incomplete send C9\n");
+        exit(EXIT_FAILURE);
+    }
+
+    err_chk(close(connfd), "close connfd C9");
+    err_chk(close(listenfd), "close listenfd C9");
 #endif
 
 #ifdef C10
