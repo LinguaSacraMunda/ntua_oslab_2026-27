@@ -25,7 +25,7 @@
 #define err_chk(func, err_str) {if ((func) == -1) die((err_str));}
 
 #define FORK
-#define C14
+#define C8
 
 #if defined(C11) || defined(C14)
 #define ROOT_ACCESS
@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
     // Message at file footer
     char msg[] = "XXXXXXXXXXXXXXXX";
 
-    char buf[5];
+    char buf[8];
     for (int i = 0; i < fd_c8_cnt; i++) {
         sprintf(buf, "bf0%d", i);
         err_chk((fd_c8[i] = open(buf, O_CREAT | O_RDWR | O_TRUNC, 0777)), "open C8");

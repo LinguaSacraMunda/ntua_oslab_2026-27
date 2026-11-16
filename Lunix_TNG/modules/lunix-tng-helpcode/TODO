@@ -1,0 +1,49 @@
+scull: LDD3, ch03
+blocking and non-blocking operations: LDD3, ch06, p151
+
+
+
+
+lunix-ldisc.c:
+    lunix_ldisc_open:
+        flow control
+
+        tty->flow = {.lock, .stopped, .tco_stopped}
+        where lock is a spinlock_t
+
+    lunix_ldisc_close:
+        wake all sleeping processes
+
+        tty->{write, read, breal}_wait are all wait_queue_head_t
+        call wake_up_interruptible()?
+    
+
+
+lunix-protocol.c:
+    lunix_protocol_update_sensors:
+
+
+
+lunix-chardev.h:
+    struct lunix_chrdev_state_struct:
+        mode
+
+    (optional) IOCTL functions:
+
+lunix-chardev.c:
+    lunix_chrdev_state_needs_refresh:
+
+    lunix_chrdev_state_update:
+
+    lunix_chrdev_open:
+
+    lunix_chrdev_release:
+
+    (optional) lunix_chrdev_ioctl:
+
+    lunix_chrdev_read:
+
+    (optional) lunix_chrdev_release:
+
+    lunix_chrdev_release:
+        DONE (?)

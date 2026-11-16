@@ -8,3 +8,12 @@
 !main.pdf
 *.out
 **/pyrforos.eps
+**.ko
+**.cmd
+#*.mod?(.[coh])
+*.mod
+*.mod.[coh]
+*.order
+Module.symvers
+compile_commands.json
+lunix-attach
