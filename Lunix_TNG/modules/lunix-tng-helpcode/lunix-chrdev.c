@@ -23,7 +23,6 @@
 #include <linux/mmzone.h>
 #include <linux/vmalloc.h>
 #include <linux/spinlock.h>
-#include <stdio.h>
 
 #include "asm-generic/errno-base.h"
 #include "asm-generic/fcntl.h"

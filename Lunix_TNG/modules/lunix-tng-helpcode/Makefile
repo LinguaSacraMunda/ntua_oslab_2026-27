@@ -8,7 +8,7 @@
 ################################################
 
 # C compiler to use for building userspace applications
-CC := $(shell if command -v gcc-16 >/dev/null 2&>1; then echo gcc-16 else echo gcc; fi)
+CC := $(shell command -v gcc-16 >/dev/null 2>&1 && echo gcc-16 || echo gcc)
 
 # Remove comment to enable verbose output from the kernel build system
 # KERNEL_VERBOSE = 'V=1'
