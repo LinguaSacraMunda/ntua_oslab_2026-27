@@ -1,6 +1,9 @@
 scull: LDD3, ch03
 blocking and non-blocking operations: LDD3, ch06, p151
 
+struct lunix_sensor_struct: https://www.kernel.org/doc/html/latest/driver-api/driver-model/design-patterns.html
+
+https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html
 
 
 
@@ -26,7 +29,8 @@ lunix-protocol.c:
 
 lunix-chardev.h:
     struct lunix_chrdev_state_struct:
-        mode
+        TODO mode
+        added id field
 
     (optional) IOCTL functions:
 
@@ -36,14 +40,78 @@ lunix-chardev.c:
     lunix_chrdev_state_update:
 
     lunix_chrdev_open:
+        DONE associate file with sensor number and type
+        TODO init lunix_chrdev_state_struct
+            DONE memory allocation
+            DONE sensor type
+
+        DONE init lunix_sensor_struct
+        DONE assign private data
 
     lunix_chrdev_release:
+        DONE deallocate private data
 
     (optional) lunix_chrdev_ioctl:
 
     lunix_chrdev_read:
 
-    (optional) lunix_chrdev_release:
+    (optional) lunix_chrdev_mmap:
 
-    lunix_chrdev_release:
+    lunix_chrdev_init:
         DONE (?)
+
+
+
+lunix.h:
+    defined LUNIX_MSRMAX_CNT as 8
+
+
+
+
+
+
+
+
+struct, enum definitions:
+
+(lunix-chardev.h)
+struct lunix_chrdev_state_struct {
+	enum lunix_msr_enum type;
+	struct lunix_sensor_struct *sensor;
+
+	/* A buffer used to hold cached textual info */
+	int buf_lim;
+	unsigned char buf_data[LUNIX_CHRDEV_BUFSZ];
+	uint32_t buf_timestamp;
+
+	struct semaphore lock;
+
+	/*
+	 * Fixme: Any mode settings? e.g. blocking vs. non-blocking
+	 */
+};
+
+
+(lunix.h)
+enum lunix_msr_enum { BATT = 0, TEMP, LIGHT, N_LUNIX_MSR };
+
+struct lunix_sensor_struct {
+	/*
+	 * A number of pages, one for each measurement.
+	 * They can be mapped to userspace.
+	 */
+	struct lunix_msr_data_struct *msr_data[N_LUNIX_MSR];
+
+	/*
+	 * Spinlock used to assert mutual exclusion between
+	 * the serial line discipline and the character device driver
+	 */
+	spinlock_t lock;
+
+	/*
+	 * A list of processes waiting to be woken up
+	 * when this sensor has been updated with new data
+	 */
+	wait_queue_head_t wq;
+};
+

@@ -27,6 +27,8 @@
 
 #define LUNIX_MSR_MAGIC 0xF00DF00D
 
+#define LUNIX_MSRMAX_CNT 8
+
 enum lunix_msr_enum { BATT = 0, TEMP, LIGHT, N_LUNIX_MSR };
 struct lunix_sensor_struct {
 	/*

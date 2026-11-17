@@ -26,6 +26,7 @@
 
 #include "asm-generic/errno-base.h"
 #include "asm-generic/fcntl.h"
+#include "linux/gfp_types.h"
 #include "linux/semaphore.h"
 #include "linux/wait.h"
 #include "lunix.h"
@@ -103,6 +104,12 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	/* ? */
 	int ret;
 
+    unsigned int minor;
+    unsigned int sensor_id;
+    unsigned int measur_id;
+
+    struct lunix_chrdev_state_struct *state;
+
 	debug("entering\n");
 	ret = -ENODEV;
 	if ((ret = nonseekable_open(inode, filp)) < 0)
@@ -112,9 +119,53 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	 * Associate this open file with the relevant sensor based on
 	 * the minor number of the device node [/dev/sensor<NO>-<TYPE>]
 	 */
-	
+
+    minor = iminor(inode);
+    sensor_id = minor / LUNIX_MSRMAX_CNT;
+    measur_id = minor % LUNIX_MSRMAX_CNT;
+
+    // Check if sensor is within range
+    if (sensor_id >= LUNIX_SENSOR_CNT) {
+        debug("%s: invalid sensor_id %d\n", __func__, sensor_id);
+        ret = -ENODEV;
+        goto out;
+    }
+
+
 	/* Allocate a new Lunix character device private state structure */
 	/* ? */
+
+
+    state = kzalloc(sizeof(struct lunix_chrdev_state_struct), GFP_KERNEL);
+    if (!state) {
+        printk(KERN_ERR "Failed to allocate memory for Lunix sensors\n");
+		goto out;
+    }
+
+    // Initialise spinlock and queue; allocate msr_data 
+    ret = lunix_sensor_init(state->sensor);
+    if (!ret) {
+        debug("%s: sensor init failed with error %d\n", __func__, ret);
+        goto out_with_state_alloc;
+    }
+
+    // Assign sensor id
+    state->id = sensor_id;
+
+    // Assign measurement type
+    if (measur_id < N_LUNIX_MSR)
+        state->type = (enum lunix_msr_enum)measur_id;
+    else
+        state->type = N_LUNIX_MSR;
+
+
+    filp->private_data = state;
+
+    // Successfully opened cdev
+    return 0;
+
+out_with_state_alloc:
+    kfree(state);
 out:
 	debug("leaving, with ret = %d\n", ret);
 	return ret;
@@ -123,6 +174,13 @@ out:
 static int lunix_chrdev_release(struct inode *inode, struct file *filp)
 {
 	/* ? */
+    struct lunix_chrdev_state_struct *state = filp->private_data;
+
+    // Free sensor->msr_data
+    lunix_sensor_destroy(state->sensor);
+
+    // Free allocated lunix_chrdev_state_struct (open)
+    kfree(state);
 	return 0;
 }
 
@@ -228,7 +286,7 @@ int lunix_chrdev_init(void)
     ret = register_chrdev_region(dev_no, lunix_minor_cnt, "lunix_sensor");
 
 	/* Since this code is a stub, exit early */
-	return 0;
+	//return 0;
 
 	if (ret < 0) {
 		debug("failed to register region, ret = %d\n", ret);

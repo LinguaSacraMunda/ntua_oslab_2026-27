@@ -43,6 +43,10 @@ struct lunix_chrdev_state_struct {
 	/*
 	 * Fixme: Any mode settings? e.g. blocking vs. non-blocking
 	 */
+
+
+    // Sensor id
+    int id;
 };
 
 /*
