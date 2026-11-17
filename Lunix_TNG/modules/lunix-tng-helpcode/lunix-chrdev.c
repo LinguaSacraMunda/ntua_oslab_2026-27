@@ -66,21 +66,28 @@ static int lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *st
  */
 static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 {
-	struct lunix_sensor_struct __attribute__((unused)) *sensor;
+	//struct lunix_sensor_struct __attribute__((unused)) *sensor = state->sensor;
+	struct lunix_sensor_struct *sensor = state->sensor;
+    uint16_t batt, temp, light;
 	
-	debug("leaving\n");
+	debug("entering\n");
 
 	/*
 	 * Grab the raw data quickly, hold the
 	 * spinlock for as little as possible.
 	 */
 	/* ? */
+    spin_lock(&sensor->lock);
 	/* Why use spinlocks? See LDD3, p. 119 */
 
 	/*
 	 * Any new data available?
 	 */
 	/* ? */
+
+    // TODO read buffer
+
+    spin_unlock(&sensor->lock);
 
 	/*
 	 * Now we can take our time to format them,
@@ -89,6 +96,7 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 
 	/* ? */
 
+    // TODO lunix_sensor_update(sensor, batt, temp, light);
 	debug("leaving\n");
 	return 0;
 }
@@ -158,6 +166,9 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
     else
         state->type = N_LUNIX_MSR;
 
+    // Initialise semaphore as mutex
+    // TODO check lock type
+    sema_init(&state->lock, 1);
 
     filp->private_data = state;
 
@@ -203,6 +214,12 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	WARN_ON(!sensor);
 
 	/* Lock? */
+    // Read must be interruptible
+    // If interrupted, down_int returns a non-zero value
+    // and the called does not hold the semaphore
+    if (down_interruptible(&state->lock)) {
+        return -ERESTARTSYS;
+    }
 	/*
 	 * If the cached character device state needs to be
 	 * updated by actual sensor data (i.e. we need to report
@@ -213,12 +230,20 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 			/* ? */
 			/* The process needs to sleep */
 			/* See LDD3, page 153 for a hint */
+
+            // Release lock before sleeping
             up(&state->lock);
+
+            // Devices opened as non-blocking; return immediately
             if (filp->f_flags & O_NONBLOCK)
                 return -EAGAIN;
 
-            if (wait_event_interruptible(sensor->wq, *f_pos == 0))
-                return -ERESTARTSYS; // TODO: check errno
+            // Sleep until new data is received
+            // TODO check wait condition
+            // TODO check errno
+            if (wait_event_interruptible(sensor->wq, 
+                        lunix_chrdev_state_update(state) != -EAGAIN))
+                return -ERESTARTSYS;
 
             if (down_interruptible(&state->lock))
                 return -ERESTARTSYS;
@@ -245,6 +270,7 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	goto out;
 out:
 	/* Unlock? */
+    up(&state->lock);
 	return ret;
 }
 

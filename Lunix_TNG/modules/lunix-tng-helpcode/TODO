@@ -1,4 +1,7 @@
 scull: LDD3, ch03
+
+read: LDD3, ch03, p67
+
 blocking and non-blocking operations: LDD3, ch06, p151
 
 struct lunix_sensor_struct: https://www.kernel.org/doc/html/latest/driver-api/driver-model/design-patterns.html
@@ -44,6 +47,7 @@ lunix-chardev.c:
         TODO init lunix_chrdev_state_struct
             DONE memory allocation
             DONE sensor type
+            TODO init semaphores
 
         DONE init lunix_sensor_struct
         DONE assign private data
