@@ -42,13 +42,15 @@ lunix-chardev.h:
 
 lunix-chardev.c:
     lunix_chrdev_state_needs_refresh:
+        DONE check last update of both sensor data and state text buffer
 
     lunix_chrdev_state_update:
         DONE spinlock
-            TODO get new data within locked space
+            DONE get new data within locked space
 
-        TODO semaphore
-            TODO format data within locked space
+        DONE format data within locked space
+            lookup table for raw data -> +/-xx.yyy
+            space is locked from semaphore in calling func
 
     lunix_chrdev_open:
 
@@ -69,6 +71,7 @@ lunix-chardev.c:
             DONE sensor id
             DONE mflags
             TODO init semaphores
+            DONE cached textual data init
 
         DONE init lunix_sensor_struct
         DONE assign private data
@@ -109,7 +112,7 @@ struct lunix_chrdev_state_struct {
 	/*
 	 * Fixme: Any mode settings? e.g. blocking vs. non-blocking
 	 */
-    // Bitset of mode flags
+    // Bitmap of mode flags
     // mflags[0] = blocking/non-blocking
     // mflags[1] = cooked data/raw data (for ioctl)
     uint8_t mflags;
@@ -143,3 +146,37 @@ struct lunix_sensor_struct {
 	wait_queue_head_t wq;
 };
 
+/*
+ * A structure, living at the start of a page, containing a version number
+ * [timestamp of last update] and a variable number of 32-bit quantities. It is
+ * meant to be mappable to userspace.
+ */
+struct lunix_msr_data_struct {
+	uint32_t magic;
+	uint32_t last_update;
+	uint32_t values[];
+};
+
+
+
+
+function declerations:
+/*
+ * Just a quick [unlocked] check to see if the cached
+ * chrdev state needs to be updated from sensor measurements.
+ */
+static int lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *state);
+
+/*
+ * Updates the cached state of a character device
+ * based on sensor data. Must be called with the
+ * character device state lock held.
+ */
+static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state);
+
+
+static int lunix_chrdev_open(struct inode *inode, struct file *filp);
+
+static int lunix_chrdev_release(struct inode *inode, struct file *filp);
+
+static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t cnt, loff_t *f_pos);

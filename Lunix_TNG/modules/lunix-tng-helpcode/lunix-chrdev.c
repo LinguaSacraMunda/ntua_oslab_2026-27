@@ -24,10 +24,12 @@
 #include <linux/vmalloc.h>
 #include <linux/spinlock.h>
 
+#include "asm-generic/bug.h"
 #include "asm-generic/errno-base.h"
 #include "asm-generic/fcntl.h"
 #include "linux/gfp_types.h"
 #include "linux/semaphore.h"
+#include "linux/timekeeping.h"
 #include "linux/wait.h"
 #include "lunix.h"
 #include "lunix-chrdev.h"
@@ -50,13 +52,22 @@ struct cdev lunix_chrdev_cdev;
 static int __attribute__((unused)) lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *);
 static int lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *state)
 {
-	struct lunix_sensor_struct *sensor;
+	struct lunix_sensor_struct *sensor = state->sensor;
 	
 	WARN_ON ( !(sensor = state->sensor));
 	/* ? */
 
+    // Check last sensor update timestamp
+    uint32_t stimestamp = sensor->msr_data[state->type]->last_update;
+    uint32_t ttimestamp = state->buf_timestamp;
+
+    // If new data has been received since last
+    // textual update, then refresh state
+    return (ttimestamp < stimestamp);
+
+
 	/* The following return is bogus, just for the stub to compile */
-	return 0; /* ? */
+    //return 0; /* ? */
 }
 
 /*
@@ -68,10 +79,12 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 {
 	//struct lunix_sensor_struct __attribute__((unused)) *sensor = state->sensor;
 	struct lunix_sensor_struct *sensor = state->sensor;
+    struct lunix_msr_data_struct *msr = sensor->msr_data[state->type];
     unsigned long flags = 0;
-    uint16_t batt, temp, light;
 	
 	debug("entering\n");
+
+    WARN_ON(msr->magic != LUNIX_MSR_MAGIC);
 
 	/*
 	 * Grab the raw data quickly, hold the
@@ -79,10 +92,10 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	 */
 	/* ? */
 
-
     // __func__ is called from open, which is interruptible,
     // so save the irq value and spin
     spin_lock_irqsave(&sensor->lock, flags);
+
 	/* Why use spinlocks? See LDD3, p. 119 */
 
 	/*
@@ -90,7 +103,13 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	 */
 	/* ? */
 
-    // TODO read buffer
+    if (!lunix_chrdev_state_needs_refresh(state)) {
+        debug("%s: no new data; returning EAGAIN\n", __func__);
+        return -EAGAIN;
+    }
+
+    // There is new data to parse
+    uint32_t values = msr->values[0];
 
     spin_unlock_irqrestore(&sensor->lock, flags);
 
@@ -101,7 +120,42 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 
 	/* ? */
 
-    // TODO lunix_sensor_update(sensor, batt, temp, light);
+    // Hold the lock while processing data
+    // Since this function is called within a locked
+    // code segment, we continue as normal
+    
+    long cdata;
+    switch (state->type) {
+    case BATT:
+            cdata = lookup_voltage[values];
+            break;
+    case TEMP:
+            cdata = lookup_temperature[values];
+            break;
+    case LIGHT:
+            cdata = lookup_light[values];
+            break;
+    default:
+            debug("%s: invalid sensor type %u\n", __func__, state->type);
+            return -ENODEV;
+            break;
+    }
+
+    // Parse cooked data +/-xx.yyy
+    uint8_t sgn = cdata >= 0;
+    if (!sgn)
+        cdata = -cdata;
+
+    uint32_t upper = cdata / 1000;
+    uint32_t lower = cdata % 1000;
+
+    state->buf_lim = snprintf(state->buf_data, LUNIX_CHRDEV_BUFSZ, "%c%u.%03u", (sgn ? '+' : '-'), upper, lower);
+    if (state->buf_lim <= 0) {
+        debug("%s: data parsing: snprintf failed to write\n", __func__);
+        return -EIO;
+    }
+
+    state->buf_timestamp = ktime_get_real_seconds();
 	debug("leaving\n");
 	return 0;
 }
@@ -184,6 +238,14 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
     // TODO check lock type and sem value
     sema_init(&state->lock, 1);
 
+    // Initialise textual buffer
+    // We could also use ktime_get_real_seconds()
+    // for the timestamp, however on first read any 
+    // clock value less that the current one is valid
+    state->buf_lim = 0;
+    state->buf_timestamp = 0;
+    state->buf_data[state->buf_lim] = '\0';
+
     filp->private_data = state;
 
     // Successfully opened cdev
@@ -229,7 +291,7 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 
 	/* Lock? */
     // Read must be interruptible
-    // If interrupted, down_int returns a non-zero value
+    // If interrupted, down_inter returns a non-zero value
     // and the called does not hold the semaphore
     if (down_interruptible(&state->lock)) {
         return -ERESTARTSYS;

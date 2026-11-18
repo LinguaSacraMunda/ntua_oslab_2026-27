@@ -43,7 +43,7 @@ struct lunix_chrdev_state_struct {
 	/*
 	 * Fixme: Any mode settings? e.g. blocking vs. non-blocking
 	 */
-    // Bitset of mode flags
+    // Bitmap of mode flags
     // mflags[0] = blocking/non-blocking
     // mflags[1] = cooked data/raw data (for ioctl)
     uint8_t mflags;
