@@ -43,11 +43,20 @@ struct lunix_chrdev_state_struct {
 	/*
 	 * Fixme: Any mode settings? e.g. blocking vs. non-blocking
 	 */
+    // Bitset of mode flags
+    // mflags[0] = blocking/non-blocking
+    // mflags[1] = cooked data/raw data (for ioctl)
+    uint8_t mflags;
 
 
     // Sensor id
     int id;
 };
+
+#define LUNIX_MFLAG_BLOCK (1 << 0)
+#define LUNIX_MFLAG_NBLCK 0x0
+#define LUNIX_MFLAG_DCOOK (1 << 2)
+#define LUNIX_MFLAG_DTRAW 0x0
 
 /*
  * Function prototypes

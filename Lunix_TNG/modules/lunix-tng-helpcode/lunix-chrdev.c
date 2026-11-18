@@ -68,6 +68,7 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 {
 	//struct lunix_sensor_struct __attribute__((unused)) *sensor = state->sensor;
 	struct lunix_sensor_struct *sensor = state->sensor;
+    unsigned long flags = 0;
     uint16_t batt, temp, light;
 	
 	debug("entering\n");
@@ -77,7 +78,11 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	 * spinlock for as little as possible.
 	 */
 	/* ? */
-    spin_lock(&sensor->lock);
+
+
+    // __func__ is called from open, which is interruptible,
+    // so save the irq value and spin
+    spin_lock_irqsave(&sensor->lock, flags);
 	/* Why use spinlocks? See LDD3, p. 119 */
 
 	/*
@@ -87,7 +92,7 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 
     // TODO read buffer
 
-    spin_unlock(&sensor->lock);
+    spin_unlock_irqrestore(&sensor->lock, flags);
 
 	/*
 	 * Now we can take our time to format them,
@@ -143,7 +148,11 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	/* Allocate a new Lunix character device private state structure */
 	/* ? */
 
-
+    // kzalloc -> allocate size memory and initialise it with 0
+    // GFP_KERNEL -> we execute on behalf of a userspace procc, so 
+    //               we must be able to sleep while memory is being allocated.
+    //               Also, mem is allocated from standard kernel mem zone (ZONE_NORMAL),
+    //               and the process may repeat till success
     state = kzalloc(sizeof(struct lunix_chrdev_state_struct), GFP_KERNEL);
     if (!state) {
         printk(KERN_ERR "Failed to allocate memory for Lunix sensors\n");
@@ -166,8 +175,13 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
     else
         state->type = N_LUNIX_MSR;
 
+    // Set flags: processed data by default
+    state->mflags |= filp->f_flags & O_NONBLOCK ? LUNIX_MFLAG_NBLCK : LUNIX_MFLAG_BLOCK;
+    state->mflags |= LUNIX_MFLAG_DCOOK;
+
+
     // Initialise semaphore as mutex
-    // TODO check lock type
+    // TODO check lock type and sem value
     sema_init(&state->lock, 1);
 
     filp->private_data = state;
