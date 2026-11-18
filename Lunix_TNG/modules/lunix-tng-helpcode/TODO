@@ -8,6 +8,9 @@ struct lunix_sensor_struct: https://www.kernel.org/doc/html/latest/driver-api/dr
 
 https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html
 
+For the sake of differentiating between lab given code and our own:
+    lab given: all comments in the form of /* ... */
+    our code : all comments in the form of // ...
 
 
 lunix-ldisc.c:
@@ -41,16 +44,13 @@ lunix-chardev.c:
     lunix_chrdev_state_needs_refresh:
 
     lunix_chrdev_state_update:
+        DONE spinlock
+            TODO get new data within locked space
+
+        TODO semaphore
+            TODO format data within locked space
 
     lunix_chrdev_open:
-        DONE associate file with sensor number and type
-        TODO init lunix_chrdev_state_struct
-            DONE memory allocation
-            DONE sensor type
-            TODO init semaphores
-
-        DONE init lunix_sensor_struct
-        DONE assign private data
 
     lunix_chrdev_release:
         DONE deallocate private data
@@ -62,12 +62,28 @@ lunix-chardev.c:
     (optional) lunix_chrdev_mmap:
 
     lunix_chrdev_init:
-        DONE (?)
+        DONE associate file with sensor number and type
+        TODO init lunix_chrdev_state_struct
+            DONE memory allocation
+            DONE sensor type
+            DONE sensor id
+            DONE mflags
+            TODO init semaphores
+
+        DONE init lunix_sensor_struct
+        DONE assign private data
 
 
-
+CHANGES TO FILES OTHER THAT lunix-chrdev.c
 lunix.h:
-    defined LUNIX_MSRMAX_CNT as 8
+#define LUNIX_MSRMAX_CNT 8
+
+
+lunix-chrdev.h:
+#define LUNIX_MFLAG_BLOCK (1 << 0)
+#define LUNIX_MFLAG_NBLCK 0x0
+#define LUNIX_MFLAG_DCOOK (1 << 2)
+#define LUNIX_MFLAG_DTRAW 0x0
 
 
 
@@ -93,6 +109,14 @@ struct lunix_chrdev_state_struct {
 	/*
 	 * Fixme: Any mode settings? e.g. blocking vs. non-blocking
 	 */
+    // Bitset of mode flags
+    // mflags[0] = blocking/non-blocking
+    // mflags[1] = cooked data/raw data (for ioctl)
+    uint8_t mflags;
+
+
+    // Sensor id
+    int id;
 };
 
 
