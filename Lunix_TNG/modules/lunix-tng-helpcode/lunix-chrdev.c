@@ -149,7 +149,12 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
     uint32_t upper = cdata / 1000;
     uint32_t lower = cdata % 1000;
 
-    state->buf_lim = snprintf(state->buf_data, LUNIX_CHRDEV_BUFSZ, "%c%u.%03u", (sgn ? '+' : '-'), upper, lower);
+    state->buf_lim = snprintf(
+            state->buf_data,
+            LUNIX_CHRDEV_BUFSZ,
+            "%c%u.%03u",
+            (sgn ? '+' : '-'), upper, lower);
+
     if (state->buf_lim <= 0) {
         debug("%s: data parsing: snprintf failed to write\n", __func__);
         return -EIO;
