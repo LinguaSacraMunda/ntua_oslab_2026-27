@@ -92,8 +92,10 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	 */
 	/* ? */
 
-    // __func__ is called from open, which is interruptible,
-    // so save the irq value and spin
+    // lunix_chrdev_state_update is called from open, which is 
+    // interruptible, so save the irq value and spin. Note that
+    // spin_lock_irqsave is a macro and the flags are saved
+    // locally, so we need not pass a reference to the variable
     spin_lock_irqsave(&sensor->lock, flags);
 
 	/* Why use spinlocks? See LDD3, p. 119 */
@@ -104,6 +106,7 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 	/* ? */
 
     if (!lunix_chrdev_state_needs_refresh(state)) {
+        spin_unlock_irqrestore(&sensor->lock, flags);
         debug("%s: no new data; returning EAGAIN\n", __func__);
         return -EAGAIN;
     }
@@ -120,10 +123,17 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 
 	/* ? */
 
-    // Hold the lock while processing data
+    // Hold the mutex lock while processing data.
     // Since this function is called within a locked
     // code segment, we continue as normal
+
+    // Raw data
+    if (state->mflags & LUNIX_MFLAG_DTRAW) {
+        // TODO (optional)
+        return 0;
+    }
     
+    // Cooked data
     long cdata;
     switch (state->type) {
     case BATT:
@@ -208,7 +218,7 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 	/* ? */
 
     // kzalloc -> allocate size memory and initialise it with 0
-    // GFP_KERNEL -> we execute on behalf of a userspace procc, so 
+    // GFP_KERNEL -> we execute on behalf of a userspace proc, so 
     //               we must be able to sleep while memory is being allocated.
     //               Also, mem is allocated from standard kernel mem zone (ZONE_NORMAL),
     //               and the process may repeat till success
