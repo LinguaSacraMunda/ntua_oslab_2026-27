@@ -30,6 +30,7 @@
 #include "linux/gfp_types.h"
 #include "linux/semaphore.h"
 #include "linux/timekeeping.h"
+#include "linux/uaccess.h"
 #include "linux/wait.h"
 #include "lunix.h"
 #include "lunix-chrdev.h"
@@ -49,7 +50,7 @@ struct cdev lunix_chrdev_cdev;
  * the compiler happy. This function is not yet used, because this helpcode
  * is a stub.
  */
-static int __attribute__((unused)) lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *);
+//static int __attribute__((unused)) lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *);
 static int lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *state)
 {
 	struct lunix_sensor_struct *sensor = state->sensor;
@@ -159,6 +160,8 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
     uint32_t upper = cdata / 1000;
     uint32_t lower = cdata % 1000;
 
+    // snprintf let's us specify the max bytes to write
+    // making it safer to use compared to sprintf
     state->buf_lim = snprintf(
             state->buf_data,
             LUNIX_CHRDEV_BUFSZ,
@@ -257,9 +260,11 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
     // We could also use ktime_get_real_seconds()
     // for the timestamp, however on first read any 
     // clock value less that the current one is valid
-    state->buf_lim = 0;
-    state->buf_timestamp = 0;
-    state->buf_data[state->buf_lim] = '\0';
+    // Note that they are already zero-initialised
+    // by kzalloc
+    //state->buf_lim = 0;
+    //state->buf_timestamp = 0;
+    //state->buf_data[state->buf_lim] = '\0';
 
     filp->private_data = state;
 
@@ -305,18 +310,19 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	WARN_ON(!sensor);
 
 	/* Lock? */
+
     // Read must be interruptible
     // If interrupted, down_inter returns a non-zero value
     // and the called does not hold the semaphore
-    if (down_interruptible(&state->lock)) {
+    if (down_interruptible(&state->lock))
         return -ERESTARTSYS;
-    }
+
 	/*
 	 * If the cached character device state needs to be
 	 * updated by actual sensor data (i.e. we need to report
 	 * on a "fresh" measurement, do so
 	 */
-	if (*f_pos == 0) {
+    if (*f_pos == 0) {
 		while (lunix_chrdev_state_update(state) == -EAGAIN) {
 			/* ? */
 			/* The process needs to sleep */
@@ -329,13 +335,18 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
             if (filp->f_flags & O_NONBLOCK)
                 return -EAGAIN;
 
-            // Sleep until new data is received
+            // See LDD3, p153
+            debug("\"%s\" reading: going to sleep\n", current->comm);
+
+            // Sleep until new data is received. Keep in mind that
+            // lunix-sensor wakes the processes in lunix_sensor_update
             // TODO check wait condition
             // TODO check errno
             if (wait_event_interruptible(sensor->wq, 
                         lunix_chrdev_state_update(state) != -EAGAIN))
                 return -ERESTARTSYS;
 
+            // New data received, reacquire the lock
             if (down_interruptible(&state->lock))
                 return -ERESTARTSYS;
 
@@ -344,12 +355,34 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 
 	/* End of file */
 	/* ? */
-	
+
+    // All available data has been read, return EOF
+    if (*f_pos >= state->buf_lim) {
+        up(&state->lock);
+        return 0;
+    }
+
 	/* Determine the number of cached bytes to copy to userspace */
 	/* ? */
+    
+    size_t rem = state->buf_lim - *f_pos;
+    size_t to_copy = rem > cnt ? cnt : rem;
+
+    if (copy_to_user(usrbuf, state->buf_data + *f_pos, to_copy)) {
+        ret = -EFAULT;
+        goto out;
+    }
+
+    // Update read offset and return read bytes
+    *f_pos += to_copy;
+    ret = to_copy;
 
 	/* Auto-rewind on EOF mode? */
 	/* ? */
+
+    // Reset offset
+    if (*f_pos >= LUNIX_CHRDEV_BUFSZ)
+        *f_pos = 0;
 
 	/*
 	 * The next two lines  are just meant to suppress a compiler warning
@@ -357,8 +390,8 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	 * It's true, this helpcode is a stub, and doesn't use them properly.
 	 * Remove them when you've started working on this code.
 	 */
-	ret = -ENODEV;
-	goto out;
+	//ret = -ENODEV;
+	//goto out;
 out:
 	/* Unlock? */
     up(&state->lock);
