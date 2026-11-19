@@ -358,6 +358,8 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 
     // All available data has been read, return EOF
     if (*f_pos >= state->buf_lim) {
+        // Refresh data on next read
+        *f_pos = 0;
         up(&state->lock);
         return 0;
     }
@@ -381,7 +383,8 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	/* ? */
 
     // Reset offset
-    if (*f_pos >= LUNIX_CHRDEV_BUFSZ)
+    // TODO check if this is actually doing anything
+    if (*f_pos >= state->buf_lim)
         *f_pos = 0;
 
 	/*

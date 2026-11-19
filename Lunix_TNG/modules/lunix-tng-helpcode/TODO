@@ -53,17 +53,6 @@ lunix-chardev.c:
             space is locked from semaphore in calling func
 
     lunix_chrdev_open:
-
-    lunix_chrdev_release:
-        DONE deallocate private data
-
-    (optional) lunix_chrdev_ioctl:
-
-    lunix_chrdev_read:
-
-    (optional) lunix_chrdev_mmap:
-
-    lunix_chrdev_init:
         DONE associate file with sensor number and type
         TODO init lunix_chrdev_state_struct
             DONE memory allocation
@@ -75,6 +64,18 @@ lunix-chardev.c:
 
         DONE init lunix_sensor_struct
         DONE assign private data
+
+    lunix_chrdev_release:
+        DONE deallocate private data
+
+    (optional) lunix_chrdev_ioctl:
+
+    lunix_chrdev_read:
+
+    (optional) lunix_chrdev_mmap:
+
+    lunix_chrdev_init:
+        DONE reserved minor numbers
 
 
 CHANGES TO FILES OTHER THAT lunix-chrdev.c
