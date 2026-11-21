@@ -26,6 +26,7 @@
 
 #include "lunix.h"
 
+
 /*
  * Private state for an open character device node
  */
@@ -56,7 +57,8 @@ struct lunix_chrdev_state_struct {
 #define LUNIX_MFLAG_BLOCK (1 << 0)
 #define LUNIX_MFLAG_NBLCK 0x0
 #define LUNIX_MFLAG_DCOOK (1 << 2)
-#define LUNIX_MFLAG_DTRAW 0x0
+#define LUNIX_MFLAG_DTRAW (1 << 3)
+#define LUNIX_MFLAG_DUNTS (1 << 4)
 
 /*
  * Function prototypes
@@ -74,6 +76,10 @@ void lunix_chrdev_destroy(void);
 #define LUNIX_IOC_MAGIC     LUNIX_CHRDEV_MAJOR
 //#define LUNIX_IOC_EXAMPLE _IOR(LUNIX_IOC_MAGIC, 0, void *)
 
-#define LUNIX_IOC_MAXNR 0
+#define LUNIX_IOC_RESET _IO(LUNIX_IOC_MAGIC, 0)
+#define LUNIX_IOC_SET _IOW(LUNIX_IOC_MAGIC, 1, int)
+#define LUNIX_IOC_GET _IOR(LUNIX_IOC_MAGIC, 2, int)
+
+#define LUNIX_IOC_MAXNR 3
 
 #endif /* _LUNIX_H */

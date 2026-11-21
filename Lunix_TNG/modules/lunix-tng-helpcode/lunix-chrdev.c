@@ -24,9 +24,12 @@
 #include <linux/vmalloc.h>
 #include <linux/spinlock.h>
 
+#include "asm-generic/access_ok.h"
 #include "asm-generic/bug.h"
 #include "asm-generic/errno-base.h"
 #include "asm-generic/fcntl.h"
+#include "asm-generic/ioctl.h"
+#include "asm/uaccess.h"
 #include "linux/gfp_types.h"
 #include "linux/semaphore.h"
 #include "linux/timekeeping.h"
@@ -136,8 +139,17 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
 
     // Raw data
     if (state->mflags & LUNIX_MFLAG_DTRAW) {
-        // TODO (optional)
-        return 0;
+        state->buf_lim = snprintf(
+                state->buf_data,
+                LUNIX_CHRDEV_BUFSZ,
+                "0x%x",
+                values);
+
+        if (state->buf_lim <= 0) {
+            debug("%s: data parsing: snprintf failed to write\n", __func__);
+            return -EIO;
+        }
+        return state->buf_lim;
     }
     
     // Cooked data
@@ -153,7 +165,7 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
             cdata = lookup_light[values];
             break;
     default:
-            debug("%s: invalid sensor type %u\n", __func__, state->type);
+            debug("Invalid sensor type %u\n", state->type);
             return -ENODEV;
             break;
     }
@@ -171,8 +183,35 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
     state->buf_lim = snprintf(
             state->buf_data,
             LUNIX_CHRDEV_BUFSZ,
-            "%c%u.%03u",
+            "%c%u.%03u ",
             (sgn ? '+' : '-'), upper, lower);
+
+
+    if (state->mflags & LUNIX_MFLAG_DUNTS) {
+        char *units;
+        switch (state->type) {
+        case BATT:
+                units = "V ";
+                break;
+        case TEMP:
+                units = "C ";
+                break;
+        case LIGHT:
+                units = "lm ";
+                break;
+        default:
+                debug("%s: invalid sensor type %u\n", __func__, state->type);
+                return -ENODEV;
+                break;
+        }
+
+        state->buf_lim += snprintf(
+                state->buf_data + state->buf_lim,
+                LUNIX_CHRDEV_BUFSZ - state->buf_lim,
+                "%s",
+                units
+                );
+    }
 
     if (state->buf_lim <= 0) {
         debug("%s: data parsing: snprintf failed to write\n", __func__);
@@ -311,7 +350,47 @@ static int lunix_chrdev_release(struct inode *inode, struct file *filp)
 
 static long lunix_chrdev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	return -EINVAL;
+    int ret = 0;
+    struct lunix_chrdev_state_struct *state;
+
+    WARN_ON(!(state = filp->private_data));
+
+    // See LDD3 c06, p140
+    if (_IOC_TYPE(cmd) != LUNIX_IOC_MAGIC)
+        return -ENOTTY;
+
+    if (_IOC_NR(cmd) > LUNIX_IOC_MAXNR)
+        return -ENOTTY;
+    
+    if (_IOC_DIR(cmd) & _IOC_READ)
+        ret = !access_ok((void __user *)arg, _IOC_SIZE(cmd));
+    else if (_IOC_DIR(cmd) & _IOC_WRITE)
+        ret = !access_ok((void __user *)arg, _IOC_SIZE(cmd));
+
+    if (ret)
+        return -EFAULT;
+
+
+    // We have called access_ok above,
+    // so using __{put, get}_user() should
+    // be safe
+    switch (cmd) {
+    case LUNIX_IOC_RESET:
+        state->mflags |= filp->f_flags & O_NONBLOCK ? LUNIX_MFLAG_NBLCK : LUNIX_MFLAG_BLOCK;
+        state->mflags |= LUNIX_MFLAG_DCOOK;
+        break;
+    case LUNIX_IOC_SET:
+        ret = __get_user(state->mflags, (int __user *)arg);
+        break;
+    case LUNIX_IOC_GET:
+        ret = __put_user(state->mflags, (int __user *)arg);
+        break;
+    default:
+        return -ENOTTY;
+        break;
+    }
+    
+    return ret;
 }
 
 static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t cnt, loff_t *f_pos)
