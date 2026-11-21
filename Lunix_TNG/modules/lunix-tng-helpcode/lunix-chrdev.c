@@ -232,6 +232,9 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
     }
 
     // Initialise spinlock and queue; allocate msr_data 
+
+    //TODO lunix_sensors[]
+    state->sensor = &lunix_sensors[sensor_id];
     ret = lunix_sensor_init(state->sensor);
     if (!ret) {
         debug("%s: sensor init failed with error %d\n", __func__, ret);
