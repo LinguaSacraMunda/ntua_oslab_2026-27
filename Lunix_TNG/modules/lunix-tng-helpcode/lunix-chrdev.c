@@ -54,6 +54,8 @@ struct cdev lunix_chrdev_cdev;
 static int lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *state)
 {
 	struct lunix_sensor_struct *sensor = state->sensor;
+
+	debug("entering\n");
 	
 	WARN_ON ( !(sensor = state->sensor));
 	/* ? */
@@ -61,6 +63,8 @@ static int lunix_chrdev_state_needs_refresh(struct lunix_chrdev_state_struct *st
     // Check last sensor update timestamp
     uint32_t stimestamp = sensor->msr_data[state->type]->last_update;
     uint32_t ttimestamp = state->buf_timestamp;
+
+    debug("sensor time: %d, buf time: %d, ret: %u\n", stimestamp, ttimestamp, ttimestamp < stimestamp);
 
     // If new data has been received since last
     // textual update, then refresh state
@@ -111,6 +115,8 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
         debug("%s: no new data; returning EAGAIN\n", __func__);
         return -EAGAIN;
     }
+
+    debug("Sensor %u updating data\n", state->id);
 
     // There is new data to parse
     uint32_t values = msr->values[0];
@@ -173,6 +179,8 @@ static int lunix_chrdev_state_update(struct lunix_chrdev_state_struct *state)
         return -EIO;
     }
 
+    debug("Sensor %u buf: %s\n", state->id, state->buf_data);
+
     state->buf_timestamp = ktime_get_real_seconds();
 	debug("leaving\n");
 	return 0;
@@ -233,13 +241,20 @@ static int lunix_chrdev_open(struct inode *inode, struct file *filp)
 
     // Initialise spinlock and queue; allocate msr_data 
 
-    //TODO lunix_sensors[]
+    // Each sensor struct is inialised by lunix-sensor,
+    // so we need only point to the corresponding memory
     state->sensor = &lunix_sensors[sensor_id];
-    ret = lunix_sensor_init(state->sensor);
-    if (!ret) {
-        debug("%s: sensor init failed with error %d\n", __func__, ret);
+
+    if (state->sensor == NULL) {
+        ret = -ENODEV;
+        debug("invalid sensor initialisation; returning with %d\n", ret);
         goto out_with_state_alloc;
     }
+    //ret = lunix_sensor_init(state->sensor);
+    //if (!ret) {
+    //    debug("%s: sensor init failed with error %d\n", __func__, ret);
+    //    goto out_with_state_alloc;
+    //}
 
     // Assign sensor id
     state->id = sensor_id;
@@ -306,12 +321,15 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 	struct lunix_sensor_struct *sensor;
 	struct lunix_chrdev_state_struct *state;
 
+    debug("entering\n");
+
 	state = filp->private_data;
 	WARN_ON(!state);
 
 	sensor = state->sensor;
 	WARN_ON(!sensor);
 
+    debug("locak vars initialised\n");
 	/* Lock? */
 
     // Read must be interruptible
@@ -346,7 +364,7 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
             // TODO check wait condition
             // TODO check errno
             if (wait_event_interruptible(sensor->wq, 
-                        lunix_chrdev_state_update(state) != -EAGAIN))
+                        lunix_chrdev_state_needs_refresh(state)))
                 return -ERESTARTSYS;
 
             // New data received, reacquire the lock
@@ -355,6 +373,8 @@ static ssize_t lunix_chrdev_read(struct file *filp, char __user *usrbuf, size_t 
 
 		}
 	}
+
+    debug("blocking data wait done");
 
 	/* End of file */
 	/* ? */
